@@ -1,0 +1,64 @@
+name: Compilator
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+    - name: Build with Maven
+      run: |
+        mkdir /opt/config
+        touch /opt/config/configv2.properties
+        mvn -B package --file pom.xml
+    - name: Upload JAR
+      uses: actions/upload-artifact@v3
+      with:
+        name: package
+        path: target/microservice-0.0.1-SNAPSHOT.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: package
+    
+    - name: config copy files
+      run: |
+        mkdir -p ~/.ssh
+        touch ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ secrets.SERVER }} >> ~/.ssh/known_hosts
+        
+    - name: Deploy to production
+      run: |
+        echo "${{ secrets.KEY }}" > ./private_key
+        chmod 600 ./private_key
+        ls -la
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "cd /opt/bot && rm -rf *"
+        scp -o StrictHostKeyChecking=no -i ./private_key -r microservice-0.0.1-SNAPSHOT.jar ${{ secrets.USER }}@${{ secrets.SERVER }}:/opt/bot
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "cp /opt/deploy/botia/docker/maven.dockerfile /opt/bot"
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "cd /opt/bot && ls -la"
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "docker build -t localhost:32000/botia:latest -f /opt/bot/maven.dockerfile /opt/bot/"
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "docker push localhost:32000/botia:latest" 
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "cd /opt/deploy/ && git pull" 
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "microk8s kubectl apply -f /opt/deploy/botia/kub/services.yaml" 
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "microk8s kubectl rollout restart deployment/botads -n botia" 
+        ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "microk8s kubectl rollout restart deployment/bot1llama -n botia" 
+        
+#        scp -o StrictHostKeyChecking=no -i ./private_key -r target ${{ secrets.USER }}@${{ secrets.SERVER }}:/opt/bot
