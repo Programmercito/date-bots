@@ -120,8 +120,8 @@ public class ReceiverForProcess {
                 } else {
                     boolean apro = aprob.equals("true") ? true : false;
                     if (!apro) {
-                        String media = update.getMedias() == null ? null : update.getMedias()[0];
-                        sender.sendChannel(update.getChatid(), update.getText(), update.getUser(), media);
+                        //String media = update.getMedias() == null ? null : update.getMedias()[0];
+                        sender.sendChannel(update.getChatid(), update.getText(), update.getUser(), null);
                         sender.send(user.getChatid(),
                                 "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
                     } else {
