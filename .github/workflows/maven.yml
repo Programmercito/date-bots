@@ -23,7 +23,7 @@ jobs:
       run: |
         mvn -B package --file pom.xml
     - name: Upload JAR
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: package
         path: target/bots-0.0.1-SNAPSHOT.jar
@@ -57,5 +57,3 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "cd /opt/deploy/ && git pull" 
         ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "microk8s kubectl apply -f /opt/codes/bot-dockers/datebot/kub/services.yaml" 
         ssh -o StrictHostKeyChecking=no -i ./private_key ${{ secrets.USER }}@${{ secrets.SERVER }} "microk8s kubectl rollout restart deployment/datebot -n datebot" 
-        
-#        scp -o StrictHostKeyChecking=no -i ./private_key -r target ${{ secrets.USER }}@${{ secrets.SERVER }}:/opt/bot
