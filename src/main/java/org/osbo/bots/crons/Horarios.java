@@ -11,8 +11,8 @@ public class Horarios {
     private String inicio;
     @Value("${telegram.horario.fin}")
     private String fin;
-    @Value("${telegram.admin}")
-    private String adminid;
+    @Value("${telegram.channel}")
+    private String channel;
 
     private final NqueueForSend queueForSend;
 
@@ -22,12 +22,12 @@ public class Horarios {
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.inicio}'.split(':')[0])} * * *")
     public void inicio() {
-        queueForSend.send(adminid, "El canal de amistad se ha abierto, escribe al bot para publicar !! @datebobot");
+        queueForSend.send(channel, "El canal de amistad se ha abierto, escribe al bot para publicar !! @datebobot");
     }
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.fin}'.split(':')[0])} * * *")
     public void fin() {
-        queueForSend.send(adminid,
-                "El canal de amistad se ha cerrado, no se podra publicar hasta el siguiente horario !! @datebobot");
+        queueForSend.send(channel,
+                "El canal de amistad se ha cerrado, no se podra publicar hasta el siguiente horario !! @datebobot mismos horarios");
     }
 }
