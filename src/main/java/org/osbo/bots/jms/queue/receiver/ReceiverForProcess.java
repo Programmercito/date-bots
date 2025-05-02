@@ -1,6 +1,5 @@
 package org.osbo.bots.jms.queue.receiver;
 
-import javax.sound.midi.Receiver;
 
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
