@@ -22,12 +22,15 @@ public class Horarios {
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.inicio}'.split(':')[0])} * * *")
     public void inicio() {
-        queueForSend.send(channel, "El canal de amistad se ha abierto, escribe al bot para publicar !! @datebobot");
+        queueForSend.send(channel, 
+            "🎉 El canal de amistad se ha abierto 🎉! Escribe al bot para publicar !! @datebobot. "
+            + "✨ Recuerda que los mensajes son efímeros y duran 30 minutos. ¡Aprovecha! 💬");
     }
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.fin}'.split(':')[0])} * * *")
     public void fin() {
-        queueForSend.send(channel,
-                "El canal de amistad se ha cerrado, no se podra publicar hasta el siguiente horario !! @datebobot mismos horarios");
+        queueForSend.send(channel, 
+            "⏳ El canal de amistad se ha cerrado ⏳. No se podrá publicar hasta el siguiente horario !! @datebobot. "
+            + "⚡ Recuerda que los mensajes son efímeros y duran 30 minutos. ¡Nos vemos pronto! 😊");
     }
 }
