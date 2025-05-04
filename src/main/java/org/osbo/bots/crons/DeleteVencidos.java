@@ -38,7 +38,7 @@ public class DeleteVencidos {
             m.setEstado("terminado");
             messageService.save(m);
             SendMessage send = new SendMessage(m.getUserid(),
-                    "El mensaje ha sido eliminado por el bot, ya que ha pasado su tiempo de expiración. "
+                    "El mensaje ha sido eliminado por el bot, ya que ha pasado su tiempo de expiración (1 hora). "
                     + "Pero no te preocupes, puedes volver a publicarlo usando el comando /publicar.");
             bot.execute(send);
         });

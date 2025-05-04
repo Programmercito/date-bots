@@ -65,14 +65,14 @@ public class ReceiverForProcess {
                         "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo");
                 user.setComando("start");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
-                    && messageService.existsMessageInLast30Minutes(update.getChatid()) == 0) {
+                    && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
                 sender.send(user.getChatid(),
                         "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. Tu mensaje estará visible durante 30 minutos ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌. Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje. ¡Esta es tu oportunidad para encontrar nuevas amistades! 🌟💫 Si cambias de opinión, puedes escribir /cancelar. ¡Estamos emocionados de leerte! 😄🙌🎈");
                 user.setComando("publicar");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
-                    && messageService.existsMessageInLast30Minutes(update.getChatid()) > 0) {
+                    && messageService.existsMessageInLastHour(update.getChatid()) > 0) {
                 sender.send(user.getChatid(),
-                        "¡Ups! 😅🚫 Ya has publicado un mensaje en los últimos 30 minutos. Por favor, espera un poco más antes de volver a publicar. ¡No te desanimes! Tu oportunidad de hacer nuevos amigos llegará pronto. 💖🤞🌟✨ ");
+                        "¡Ups! 😅🚫 Ya has publicado un mensaje en la última hora. Por favor, espera un poco más antes de volver a publicar. ¡No te desanimes! Tu oportunidad de hacer nuevos amigos llegará pronto. 💖🤞🌟✨ ");
             } else if ("/publicar".equals(update.getText()) && update.getUser() == null) {
                 sender.send(user.getChatid(),
                         "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");

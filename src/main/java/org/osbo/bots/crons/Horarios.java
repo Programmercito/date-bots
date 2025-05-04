@@ -24,13 +24,13 @@ public class Horarios {
     public void inicio() {
         queueForSend.send(channel, 
             "🎉 El canal de amistad se ha abierto 🎉! Escribe al bot para publicar !! @datebobot. "
-            + "✨ Recuerda que los mensajes son efímeros y duran 30 minutos. ¡Aprovecha! 💬");
+            + "✨ Recuerda que los mensajes son efímeros y duran 1 hora. ¡Aprovecha! 💬");
     }
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.fin}'.split(':')[0])} * * *")
     public void fin() {
         queueForSend.send(channel, 
             "⏳ El canal de amistad se ha cerrado ⏳. No se podrá publicar hasta el siguiente horario !! @datebobot. "
-            + "⚡ Recuerda que los mensajes son efímeros y duran 30 minutos. ¡Nos vemos pronto! 😊");
+            + "⚡ Recuerda que los mensajes son efímeros y duran 1 hora. ¡Nos vemos pronto! 😊");
     }
 }
