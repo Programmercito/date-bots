@@ -22,8 +22,8 @@ public class MessageService {
         return messageRepository.findById(id).orElse(null);
     }
 
-    public int existsMessageInLast30Minutes(String user) {
-        return messageRepository.existsMessageInLast30Minutes(user);
+    public int existsMessageInLastHour(String user) {
+        return messageRepository.existsMessageInLastHour(user);
     }
 
     public List<Message> vencidos() {
