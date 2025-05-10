@@ -6,6 +6,7 @@ import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
+import org.osbo.bots.util.CustomProperties;
 import org.osbo.bots.util.FechaActual;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
@@ -25,9 +26,6 @@ public class ReceiverForProcess {
 
     @Value("${telegram.channel}")
     private String chatidchannel;
-
-    @Value("${telegram.aprob}")
-    private String aprob;
 
     @Value("${telegram.admin}")
     private String adminid;
@@ -90,6 +88,19 @@ public class ReceiverForProcess {
                 sender.send(msg.getUserid(),
                         "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
 
+            } else if (update.getText().startsWith("/admin") && adminid.equals(update.getChatid())) {
+                String aprob= CustomProperties.getProperty("telegram.aprob");
+                boolean apro= aprob.equals("true")?true:false;
+                if (apro) {
+                    sender.send(update.getChatid(), "Se ha cmabiado el modo de aprobacion a directo");
+                    CustomProperties.setProperty("telegram.aprob", "false");
+                    CustomProperties.save();
+                }else {
+                    sender.send(update.getChatid(), "Se ha cmabiado el modo de aprobacion a moderado");
+                    CustomProperties.setProperty("telegram.aprob", "true");
+                    CustomProperties.save();
+                }
+
             } else if (update.getText().startsWith("/rechazar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
                 Message msg = messageService.findById(partes[1] + "_" + partes[2]);
@@ -119,6 +130,7 @@ public class ReceiverForProcess {
                     sender.send(user.getChatid(),
                             "¡Ups! 😅⏳ En este momento no es posible publicar mensajes. Por favor, intenta más tarde. ¡No te desanimes, tu oportunidad de hacer nuevos amigos llegará pronto! 💖🤞🌟✨");
                 } else {
+                    String aprob = CustomProperties.getProperty("telegram.aprob");
                     boolean apro = aprob.equals("true") ? true : false;
                     if (!apro) {
                         // String media = update.getMedias() == null ? null : update.getMedias()[0];
