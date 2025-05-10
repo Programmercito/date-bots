@@ -31,7 +31,7 @@ public class CustomProperties {
     }
 
     public static void save() {
-        try (FileOutputStream fos = new FileOutputStream(file)) {
+        try (FileOutputStream fos = new FileOutputStream(CustomProperties.file)) {
             properties.store(fos, "Custom Properties File");
         } catch (IOException e) {
             e.printStackTrace();
