@@ -31,6 +31,18 @@ public class CustomProperties {
     }
 
     public static void save() {
+        if (CustomProperties.file == null) {
+            CustomProperties.file = new File("/opt/db/custom.properties");
+        }
+        if (!CustomProperties.file.exists()) {
+            try {
+                CustomProperties.file.getParentFile().mkdirs(); // Ensure parent directories exist
+                CustomProperties.file.createNewFile(); // Create the file if it doesn't exist
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
         try (FileOutputStream fos = new FileOutputStream(CustomProperties.file)) {
             properties.store(fos, "Custom Properties File");
         } catch (IOException e) {
