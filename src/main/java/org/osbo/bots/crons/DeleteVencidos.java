@@ -42,6 +42,7 @@ public class DeleteVencidos {
                     "Tu mensaje ha completado su ciclo de 1 hora en el canal y ha sido retirado automáticamente. 🚀✨\n\n" +
                     "¿Quieres seguir conociendo gente increíble? 🤔💭\n\n" +
                     "¡No hay problema! 😃 Usa el comando /publicar para compartir un nuevo mensaje y continuar haciendo conexiones maravillosas. 🌟👋\n\n" +
+                    "📸 ¡Recuerda que también puedes enviar una foto junto con tu mensaje! Si la moderación está activada, tu publicación será revisada antes de aparecer. Si no, ¡se publicará directamente como texto! 📝✨\n\n" +
                     "¡Las mejores amistades podrían estar esperándote! 💖🔍");
             bot.execute(send);
         });

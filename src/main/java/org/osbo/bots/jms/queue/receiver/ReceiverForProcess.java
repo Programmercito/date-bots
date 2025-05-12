@@ -67,7 +67,12 @@ public class ReceiverForProcess {
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
                 sender.send(user.getChatid(),
-                        "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. Tu mensaje estará visible durante una hora ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌. Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje. ¡Esta es tu oportunidad para encontrar nuevas amistades! 🌟💫 Si cambias de opinión, puedes escribir /cancelar. ¡Estamos emocionados de leerte! 😄🙌🎈");
+                        "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴.\n\n" +
+                        "📸 ¡También puedes enviar una foto junto con tu mensaje para destacar más! 🌟 Dependiendo del modo actual: si la moderación está activada, tu publicación será revisada antes de aparecer; si no, ¡se publicará directamente! 🚀\n\n" +
+                        "Tu mensaje estará visible durante una hora ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌.\n\n" +
+                        "Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje.\n\n" +
+                        "¡Esta es tu oportunidad para encontrar nuevas amistades! 💫 Si cambias de opinión, puedes escribir /cancelar.\n\n" +
+                        "¡Estamos emocionados de leerte! 😄🙌🎈");
                 user.setComando("publicar");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) > 0) {
