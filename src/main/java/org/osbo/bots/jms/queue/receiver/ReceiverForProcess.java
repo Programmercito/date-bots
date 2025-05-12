@@ -75,7 +75,7 @@ public class ReceiverForProcess {
                         "¡Ups! 😅🚫 Ya has publicado un mensaje en la última hora. Por favor, espera un poco más antes de volver a publicar. ¡No te desanimes! Tu oportunidad de hacer nuevos amigos llegará pronto. 💖🤞🌟✨ ");
             } else if ("/publicar".equals(update.getText()) && update.getUser() == null) {
                 sender.send(user.getChatid(),
-                        "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
+                        "¡Oops! 😅🚫 Necesitas configurar un nombre de usuario en Telegram para poder publicar. ¡Es súper fácil! 🤩 Solo ve a la app de Telegram ➡️ Configuración ⚙️ y crea tu @usuario. ¡Así todos podrán encontrarte! 🔍✨ Una vez configurado, regresa y comparte tu mensaje. ¡Estamos deseando conocer nuevos amigos contigo! 💫💪🌈 Si prefieres no hacerlo ahora, escribe /cancelar. ¡Te esperamos con los brazos abiertos! 🤗💝");
                 user.setComando("publicar");
             } else if (update.getText().startsWith("/aprobar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
@@ -84,16 +84,16 @@ public class ReceiverForProcess {
                 msg.setEstado("aprobado");
                 sender.sendChannel(chatidchannel, msg.getTexto(), null, msg.getMedia(), idc);
                 messageService.save(msg);
-                sender.send(update.getChatid(), "Mensaje aprobado con exito.");
+                sender.send(update.getChatid(), "¡Perfecto! ✅ Mensaje aprobado y publicado con éxito. 🌟 ¡Gracias por mantener nuestra comunidad activa y segura! 🛡️😊");
                 sender.send(msg.getUserid(),
-                        "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
+                        "¡GENIAL! 🎊🎉🥳 Tu mensaje acaba de ser publicado en nuestro canal de amistad. 📣 ¡Es tu momento de brillar y conocer personas maravillosas! ✨👫👭👬 Esperamos que vivas experiencias increíbles y hagas conexiones especiales. 💖 Si quieres volver a publicar en otro momento, solo escribe /publicar. ¡La aventura de hacer nuevos amigos te espera! 🚀🌈🤩\n\n¡Visita ahora nuestro canal y mira tu mensaje! 👉 https://t.me/amistadbo 👈");
 
             } else if (update.getText().startsWith("/admin") && adminid.equals(update.getChatid())) {
                 String aprob = CustomProperties.getProperty("telegram.aprob");
                 boolean apro = aprob.equals("true") ? true : false;
                 if (apro) {
-                    sender.send(update.getChatid(), "¡Atención! 🔔 Se ha cambiado el modo de aprobación a moderado 🛡️. ¡Los mensajes pasarán por revisión antes de ser publicados! ✓");
-                    sender.send(chatidchannel, "¡AVISO IMPORTANTE! ⚠️ Se ha DESACTIVADO el modo de fotos permitidas 🚫📷. Por ahora solo puedes enviar mensajes de texto 💬. ¡Recuerda que debes cumplir con las normas de la comunidad! 📝❤️");
+                    sender.send(update.getChatid(), "¡Configuración actualizada! ⚙️✨ Has cambiado el modo de aprobación a MODERADO 🛡️🔍. Ahora todos los mensajes pasarán por tu revisión antes de ser publicados. ¡Control total activado! 💯🔐");
+                    sender.send(chatidchannel, "⚠️ AVISO IMPORTANTE DE LA ADMINISTRACIÓN ⚠️\n\n¡El modo de fotos ha sido DESACTIVADO temporalmente! 🚫📸\n\nPor ahora, solo se permiten mensajes de texto. 📝💬\n\nRecuerda seguir nuestras normas comunitarias para mantener un espacio amigable y respetuoso para todos. 🤝❤️\n\n¡Gracias por ser parte de nuestra comunidad! 🌟😊");
                     CustomProperties.setProperty("telegram.aprob", "false");
                     CustomProperties.save();
                 } else {
