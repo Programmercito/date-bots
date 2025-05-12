@@ -7,6 +7,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.CustomProperties;
+import org.osbo.bots.util.DateUtils;
 import org.osbo.bots.util.FechaActual;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
@@ -67,12 +68,17 @@ public class ReceiverForProcess {
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
                 sender.send(user.getChatid(),
-                        "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴.\n\n" +
-                        "📸 ¡También puedes enviar una foto junto con tu mensaje para destacar más! 🌟 Dependiendo del modo actual: si la moderación está activada, tu publicación será revisada antes de aparecer; si no, ¡se publicará directamente! 🚀\n\n" +
-                        "Tu mensaje estará visible durante una hora ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌.\n\n" +
-                        "Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje.\n\n" +
-                        "¡Esta es tu oportunidad para encontrar nuevas amistades! 💫 Si cambias de opinión, puedes escribir /cancelar.\n\n" +
-                        "¡Estamos emocionados de leerte! 😄🙌🎈");
+                        "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴.\n\n"
+                                +
+                                "📸 ¡También puedes enviar una foto junto con tu mensaje para destacar más! 🌟 Dependiendo del modo actual: si la moderación está activada, tu publicación será revisada antes de aparecer; si no, ¡se publicará directamente! 🚀\n\n"
+                                +
+                                "Tu mensaje estará visible durante una hora ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌.\n\n"
+                                +
+                                "Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje.\n\n"
+                                +
+                                "¡Esta es tu oportunidad para encontrar nuevas amistades! 💫 Si cambias de opinión, puedes escribir /cancelar.\n\n"
+                                +
+                                "¡Estamos emocionados de leerte! 😄🙌🎈");
                 user.setComando("publicar");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) > 0) {
@@ -89,7 +95,8 @@ public class ReceiverForProcess {
                 msg.setEstado("aprobado");
                 sender.sendChannel(chatidchannel, msg.getTexto(), null, msg.getMedia(), idc);
                 messageService.save(msg);
-                sender.send(update.getChatid(), "¡Perfecto! ✅ Mensaje aprobado y publicado con éxito. 🌟 ¡Gracias por mantener nuestra comunidad activa y segura! 🛡️😊");
+                sender.send(update.getChatid(),
+                        "¡Perfecto! ✅ Mensaje aprobado y publicado con éxito. 🌟 ¡Gracias por mantener nuestra comunidad activa y segura! 🛡️😊");
                 sender.send(msg.getUserid(),
                         "¡GENIAL! 🎊🎉🥳 Tu mensaje acaba de ser publicado en nuestro canal de amistad. 📣 ¡Es tu momento de brillar y conocer personas maravillosas! ✨👫👭👬 Esperamos que vivas experiencias increíbles y hagas conexiones especiales. 💖 Si quieres volver a publicar en otro momento, solo escribe /publicar. ¡La aventura de hacer nuevos amigos te espera! 🚀🌈🤩\n\n¡Visita ahora nuestro canal y mira tu mensaje! 👉 https://t.me/amistadbo 👈");
 
@@ -97,13 +104,17 @@ public class ReceiverForProcess {
                 String aprob = CustomProperties.getProperty("telegram.aprob");
                 boolean apro = aprob.equals("true") ? true : false;
                 if (apro) {
-                    sender.send(update.getChatid(), "¡Configuración actualizada! ⚙️✨ Has cambiado el modo de aprobación a MODERADO 🛡️🔍. Ahora todos los mensajes pasarán por tu revisión antes de ser publicados. ¡Control total activado! 💯🔐");
-                    sender.send(chatidchannel, "⚠️ AVISO IMPORTANTE DE LA ADMINISTRACIÓN ⚠️\n\n¡El modo de fotos ha sido DESACTIVADO temporalmente! 🚫📸\n\nPor ahora, solo se permiten mensajes de texto. 📝💬\n\nRecuerda seguir nuestras normas comunitarias para mantener un espacio amigable y respetuoso para todos. 🤝❤️\n\n¡Gracias por ser parte de nuestra comunidad! 🌟😊");
+                    sender.send(update.getChatid(),
+                            "¡Configuración actualizada! ⚙️✨ Has cambiado el modo de aprobación a MODERADO 🛡️🔍. Ahora todos los mensajes pasarán por tu revisión antes de ser publicados. ¡Control total activado! 💯🔐");
+                    sender.send(chatidchannel,
+                            "⚠️ AVISO IMPORTANTE DE LA ADMINISTRACIÓN ⚠️\n\n¡El modo de fotos ha sido DESACTIVADO temporalmente! 🚫📸\n\nPor ahora, solo se permiten mensajes de texto. 📝💬\n\nRecuerda seguir nuestras normas comunitarias para mantener un espacio amigable y respetuoso para todos. 🤝❤️\n\n¡Gracias por ser parte de nuestra comunidad! 🌟😊");
                     CustomProperties.setProperty("telegram.aprob", "false");
                     CustomProperties.save();
                 } else {
-                    sender.send(update.getChatid(), "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
-                    sender.send(chatidchannel, "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
+                    sender.send(update.getChatid(),
+                            "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
+                    sender.send(chatidchannel,
+                            "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
                     CustomProperties.setProperty("telegram.aprob", "true");
                     CustomProperties.save();
                 }
@@ -134,8 +145,14 @@ public class ReceiverForProcess {
                 user.setComando("start");
             } else {
                 if (!validarTiempos()) {
+                    String in = DateUtils.convertirHoraALaPaz(inicio);
+                    String fn = DateUtils.convertirHoraALaPaz(fin);
                     sender.send(user.getChatid(),
-                            "¡Ups! 😅⏳ En este momento no es posible publicar mensajes. Por favor, intenta más tarde. ¡No te desanimes, tu oportunidad de hacer nuevos amigos llegará pronto! 💖🤞🌟✨");
+                            "⏳ ¡Ups! Por ahora no es posible publicar mensajes, pero no te preocupes, tu momento llegará pronto. 😊✨\n\n"
+                                    +
+                                    "🕒 Los horarios actuales para publicar son de " + in + " a " + fn
+                                    + " (hora de La Paz, Bolivia 🇧🇴).\n\n" +
+                                    "¡Vuelve a intentarlo dentro de ese horario y sigue haciendo nuevas amistades! 💬🤗🌟");
                 } else {
                     String aprob = CustomProperties.getProperty("telegram.aprob");
                     boolean apro = aprob.equals("true") ? true : false;
