@@ -92,13 +92,13 @@ public class ReceiverForProcess {
                 String aprob = CustomProperties.getProperty("telegram.aprob");
                 boolean apro = aprob.equals("true") ? true : false;
                 if (apro) {
-                    sender.send(update.getChatid(), "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
-                    sender.send(chatidchannel, "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
+                    sender.send(update.getChatid(), "¡Atención! 🔔 Se ha cambiado el modo de aprobación a moderado 🛡️. ¡Los mensajes pasarán por revisión antes de ser publicados! ✓");
+                    sender.send(chatidchannel, "¡AVISO IMPORTANTE! ⚠️ Se ha DESACTIVADO el modo de fotos permitidas 🚫📷. Por ahora solo puedes enviar mensajes de texto 💬. ¡Recuerda que debes cumplir con las normas de la comunidad! 📝❤️");
                     CustomProperties.setProperty("telegram.aprob", "false");
                     CustomProperties.save();
                 } else {
-                    sender.send(update.getChatid(), "¡Atención! 🔔 Se ha cambiado el modo de aprobación a moderado 🛡️. ¡Los mensajes pasarán por revisión antes de ser publicados! ✓");
-                    sender.send(chatidchannel, "¡AVISO IMPORTANTE! ⚠️ Se ha DESACTIVADO el modo de fotos permitidas 🚫📷. Por ahora solo puedes enviar mensajes de texto 💬. ¡Recuerda que debes cumplir con las normas de la comunidad! 📝❤️");
+                    sender.send(update.getChatid(), "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
+                    sender.send(chatidchannel, "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
                     CustomProperties.setProperty("telegram.aprob", "true");
                     CustomProperties.save();
                 }
