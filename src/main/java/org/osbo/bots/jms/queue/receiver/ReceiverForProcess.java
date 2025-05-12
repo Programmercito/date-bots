@@ -89,14 +89,16 @@ public class ReceiverForProcess {
                         "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
 
             } else if (update.getText().startsWith("/admin") && adminid.equals(update.getChatid())) {
-                String aprob= CustomProperties.getProperty("telegram.aprob");
-                boolean apro= aprob.equals("true")?true:false;
+                String aprob = CustomProperties.getProperty("telegram.aprob");
+                boolean apro = aprob.equals("true") ? true : false;
                 if (apro) {
-                    sender.send(update.getChatid(), "Se ha cmabiado el modo de aprobacion a directo");
+                    sender.send(update.getChatid(), "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
+                    sender.send(chatidchannel, "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
                     CustomProperties.setProperty("telegram.aprob", "false");
                     CustomProperties.save();
-                }else {
-                    sender.send(update.getChatid(), "Se ha cmabiado el modo de aprobacion a moderado");
+                } else {
+                    sender.send(update.getChatid(), "¡Atención! 🔔 Se ha cambiado el modo de aprobación a moderado 🛡️. ¡Los mensajes pasarán por revisión antes de ser publicados! ✓");
+                    sender.send(chatidchannel, "¡AVISO IMPORTANTE! ⚠️ Se ha DESACTIVADO el modo de fotos permitidas 🚫📷. Por ahora solo puedes enviar mensajes de texto 💬. ¡Recuerda que debes cumplir con las normas de la comunidad! 📝❤️");
                     CustomProperties.setProperty("telegram.aprob", "true");
                     CustomProperties.save();
                 }
@@ -107,8 +109,8 @@ public class ReceiverForProcess {
                 msg.setEstado("rechazado");
                 messageService.save(msg);
                 sender.send(msg.getUserid(),
-                        "Tu mensaje ha sido rechazado por los administradores, ten cuidado con lo que solicitas o podrias ser bloqueado, puedes volver a intentarlo mas tarde.");
-                sender.send(update.getChatid(), "Mensaje rechazado con exito.");
+                        "Lo sentimos 😔, tu mensaje ha sido rechazado por los administradores. ⚠️ Ten cuidado con lo que solicitas o podrías ser bloqueado. 🚫 ¡Puedes volver a intentarlo más tarde con un mensaje apropiado! 💪🔄");
+                sender.send(update.getChatid(), "¡Mensaje rechazado con éxito! 🛑✅");
             } else if (update.getText().startsWith("/bloquear_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
                 User us = userService.findById(partes[1]);
