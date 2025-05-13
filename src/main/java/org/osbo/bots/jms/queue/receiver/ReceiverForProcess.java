@@ -57,7 +57,7 @@ public class ReceiverForProcess {
         }
         if (update.getUser() == null || update.getUser().isEmpty()) {
             sender.send(update.getChatid(),
-                    "¡Hola! 😊 Parece que no tienes configurado un nombre de usuario en Telegram. Para continuar, por favor ve a la app de Telegram, entra en Configuración ⚙️ y crea tu @usuario. Esto permitirá que otros puedan encontrarte fácilmente. ¡Te esperamos para que sigas disfrutando del bot! 🚀✨");
+                    "¡Hola! 😊 Parece que no tienes configurado un nombre de usuario en Telegram. Para continuar, por favor ve a la app de Telegram, entra en Configuración ⚙️ y crea tu @usuario. Esto permitirá que otros puedan encontrarte fácilmente. Si necesitas ayuda, puedes ver este video: https://www.youtube.com/watch?v=ihForTZuTVE. ¡Te esperamos para que sigas disfrutando del bot! 🚀✨");
             return;
         }
         if (user.getEstado().equals("bloqueado")) {
