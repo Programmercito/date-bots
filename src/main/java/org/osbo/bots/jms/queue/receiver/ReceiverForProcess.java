@@ -55,6 +55,11 @@ public class ReceiverForProcess {
             user.setUser(update.getUser());
             userService.save(user);
         }
+        if (update.getUser() == null || update.getUser().isEmpty()) {
+            sender.send(update.getChatid(),
+                    "¡Oops! 😅🚫 Necesitas configurar un nombre de usuario en Telegram para poder continuar. Ve a la app de Telegram ➡️ Configuración ⚙️ y crea tu @usuario. ¡Así todos podrán encontrarte! 🔍✨");
+            return;
+        }
         if (user.getEstado().equals("bloqueado")) {
             sender.send(update.getChatid(),
                     "Lo sentimos, no puedes usar el bot porque tu cuenta ha sido inactivada por denuncias de otros usuarios. hasta luego");
