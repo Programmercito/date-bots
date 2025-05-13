@@ -1,6 +1,5 @@
 package org.osbo.bots.util;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -12,6 +11,10 @@ public class CustomProperties {
     private static File file;
 
     public CustomProperties() {
+        CustomProperties.load();
+    }
+
+    public static void load() {
         CustomProperties.file = new File("/opt/db/custom.properties");
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file)) {

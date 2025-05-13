@@ -154,6 +154,7 @@ public class ReceiverForProcess {
                                     + " (hora de La Paz, Bolivia 🇧🇴).\n\n" +
                                     "¡Vuelve a intentarlo dentro de ese horario y sigue haciendo nuevas amistades! 💬🤗🌟");
                 } else {
+                    CustomProperties.load();
                     String aprob = CustomProperties.getProperty("telegram.aprob");
                     boolean apro = aprob.equals("true") ? true : false;
                     if (!apro) {
