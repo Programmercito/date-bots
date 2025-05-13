@@ -105,14 +105,14 @@ public class ReceiverForProcess {
                 boolean apro = aprob.equals("true") ? true : false;
                 if (apro) {
                     sender.send(update.getChatid(),
-                            "¡Configuración actualizada! ⚙️✨ Has cambiado el modo de aprobación a MODERADO 🛡️🔍. Ahora todos los mensajes pasarán por tu revisión antes de ser publicados. ¡Control total activado! 💯🔐");
+                            "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
                     sender.send(chatidchannel,
                             "⚠️ AVISO IMPORTANTE DE LA ADMINISTRACIÓN ⚠️\n\n¡El modo de fotos ha sido DESACTIVADO temporalmente! 🚫📸\n\nPor ahora, solo se permiten mensajes de texto. 📝💬\n\nRecuerda seguir nuestras normas comunitarias para mantener un espacio amigable y respetuoso para todos. 🤝❤️\n\n¡Gracias por ser parte de nuestra comunidad! 🌟😊");
                     CustomProperties.setProperty("telegram.aprob", "false");
                     CustomProperties.save();
                 } else {
                     sender.send(update.getChatid(),
-                            "¡Genial! 🎉 Se ha cambiado el modo de aprobación a directo ✅. ¡Los mensajes se publicarán instantáneamente! 🚀");
+                            "¡Configuración actualizada! ⚙️✨ Has cambiado el modo de aprobación a MODERADO 🛡️🔍. Ahora todos los mensajes pasarán por tu revisión antes de ser publicados. ¡Control total activado! 💯🔐");
                     sender.send(chatidchannel,
                             "¡BUENAS NOTICIAS! 🤩 Se ha ACTIVADO el modo de fotos permitidas 📸✨. ¡Ahora puedes enviar tu mensaje junto con una foto y será publicada en el canal! 🌟 Recuerda que debes cumplir con las normas de la comunidad 📝👍");
                     CustomProperties.setProperty("telegram.aprob", "true");
