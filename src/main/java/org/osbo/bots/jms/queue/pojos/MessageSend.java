@@ -1,10 +1,10 @@
 package org.osbo.bots.jms.queue.pojos;
 
+import java.util.List;
+
 import lombok.Data;
 
 @Data
-import java.util.List;
-
 public class MessageSend {
     public String chatid;
     public String text;
