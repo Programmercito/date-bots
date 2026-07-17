@@ -1,5 +1,8 @@
 package org.osbo.bots.jms.queue.enqueue;
 
+import java.util.List;
+
+import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageSend;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
@@ -17,24 +20,33 @@ public class NqueueForSend {
     }
 
     public void send(@NonNull String chatid, @NonNull String text) {
-        this.send(chatid, text, "text", null, null, false);
+        this.send(chatid, text, "text", null, null, false, null);
     }
 
     public void send(@NonNull String chatid, @NonNull String text, boolean disableNotification) {
-        this.send(chatid, text, "text", null, null, disableNotification);
+        this.send(chatid, text, "text", null, null, disableNotification, null);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, List<List<Button>> buttons) {
+        this.send(chatid, text, "text", null, null, false, buttons);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, boolean disableNotification,
+            List<List<Button>> buttons) {
+        this.send(chatid, text, "text", null, null, disableNotification, buttons);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user) {
-        this.send(chatid, text + "\nPuedes escribirle a :@" + user, "channel", null, null, false);
+        this.sendChannel(chatid, text, user, null, null);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user, String photo,
             String msgid) {
-        String add = "";
+        List<List<Button>> buttons = null;
         if (user != null) {
-            add = "\nPuedes escribirle a :@" + user;
+            buttons = List.of(List.of(new Button("✉️ Escríbele", null, "https://t.me/" + user)));
         }
-        this.send(chatid, text + add, "channel", photo, msgid, false);
+        this.send(chatid, text, "channel", photo, msgid, false, buttons);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user, String photo) {
@@ -42,21 +54,34 @@ public class NqueueForSend {
     }
 
     public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid) {
-        this.send(chatid, text, tipo, photo, msgid, false);
+        this.send(chatid, text, tipo, photo, msgid, false, null);
     }
 
     public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
             boolean disableNotification) {
+        this.send(chatid, text, tipo, photo, msgid, disableNotification, null);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
+            boolean disableNotification, List<List<Button>> buttons) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setText(text);
         message.setTipo(tipo);
         message.setMsgid(msgid);
         message.setDisableNotification(disableNotification);
+        message.setButtons(buttons);
         if (photo != null) {
             message.setMedias(new String[1]);
             message.getMedias()[0] = photo;
         }
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
+    public void answerCallbackQuery(@NonNull String callbackQueryId) {
+        MessageSend message = new MessageSend();
+        message.setTipo("callback");
+        message.setCallbackQueryId(callbackQueryId);
         jmsTemplate.convertAndSend("queue.send", message);
     }
 }

@@ -22,8 +22,9 @@ public class Horarios {
 
     @Scheduled(cron = "0 0 #{T(java.lang.Integer).parseInt('${telegram.horario.inicio}'.split(':')[0])} * * *")
     public void inicio() {
-        queueForSend.send(channel, 
+        queueForSend.send(channel,
             "🎉 El canal de amistad se ha abierto 🎉! Escribe al bot para publicar !! @datebobot. "
+            + "Puedes enviar mensajes de texto, fotos, emojis y usar negritas. "
             + "✨ Recuerda que los mensajes son efímeros y duran 1 hora luego son borrados automaticamente. ¡Disfruta! 😊");
     }
 
