@@ -40,10 +40,13 @@ public class ReceiverForSend {
         }
         SendResponse response;
         if (message.getMedias() == null) {
-            response = bot.execute(new SendMessage(destinatario, message.getText()));
+            SendMessage sendMessage = new SendMessage(destinatario, message.getText());
+            sendMessage.disableNotification(message.isDisableNotification());
+            response = bot.execute(sendMessage);
         } else {
             SendPhoto sendphoto = new SendPhoto(destinatario, message.getMedias()[0]);
             sendphoto.caption(message.getText());
+            sendphoto.disableNotification(message.isDisableNotification());
             response = bot.execute(sendphoto);
         }
         if (response.isOk()) {

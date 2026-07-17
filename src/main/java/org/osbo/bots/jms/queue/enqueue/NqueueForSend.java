@@ -17,11 +17,15 @@ public class NqueueForSend {
     }
 
     public void send(@NonNull String chatid, @NonNull String text) {
-        this.send(chatid, text, "text", null, null);
+        this.send(chatid, text, "text", null, null, false);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, boolean disableNotification) {
+        this.send(chatid, text, "text", null, null, disableNotification);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user) {
-        this.send(chatid, text + "\nPuedes escribirle a :@" + user, "channel", null, null);
+        this.send(chatid, text + "\nPuedes escribirle a :@" + user, "channel", null, null, false);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user, String photo,
@@ -30,7 +34,7 @@ public class NqueueForSend {
         if (user != null) {
             add = "\nPuedes escribirle a :@" + user;
         }
-        this.send(chatid, text + add, "channel", photo, msgid);
+        this.send(chatid, text + add, "channel", photo, msgid, false);
     }
 
     public void sendChannel(@NonNull String chatid, @NonNull String text, @NonNull String user, String photo) {
@@ -38,11 +42,17 @@ public class NqueueForSend {
     }
 
     public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid) {
+        this.send(chatid, text, tipo, photo, msgid, false);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
+            boolean disableNotification) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setText(text);
         message.setTipo(tipo);
         message.setMsgid(msgid);
+        message.setDisableNotification(disableNotification);
         if (photo != null) {
             message.setMedias(new String[1]);
             message.getMedias()[0] = photo;
