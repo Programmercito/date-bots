@@ -105,23 +105,23 @@ public class ReceiverForSend {
                 }
 
                 String adminText = partes[0] + "\nDe: @" + partes[1];
-                List<List<Button>> buttons = List.of(
+                List<List<Button>> adminButtons = List.of(
                         List.of(new Button("✅ Aprobar", "/aprobar_" + msg.getId(), null),
                                 new Button("❌ Rechazar", "/rechazar_" + msg.getId(), null),
                                 new Button("⛔ Bloquear", "/bloquear_" + msg.getUserid(), null)));
-                InlineKeyboardMarkup markup = buildMarkup(buttons);
+                InlineKeyboardMarkup adminMarkup = buildMarkup(adminButtons);
 
                 if (message.getMedias() != null) {
                     EditMessageCaption edit = new EditMessageCaption(message.getChatid(), id);
                     edit.caption(adminText);
-                    if (markup != null) {
-                        edit.replyMarkup(markup);
+                    if (adminMarkup != null) {
+                        edit.replyMarkup(adminMarkup);
                     }
                     bot.execute(edit);
                 } else {
                     EditMessageText edit = new EditMessageText(message.getChatid(), id, adminText);
-                    if (markup != null) {
-                        edit.replyMarkup(markup);
+                    if (adminMarkup != null) {
+                        edit.replyMarkup(adminMarkup);
                     }
                     bot.execute(edit);
                 }
