@@ -8,4 +8,5 @@ public class MessageUpdate {
     private String text;
     private String user;
     private String[] medias;
+    private String callbackQueryId;
 }

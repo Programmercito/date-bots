@@ -15,6 +15,7 @@ public class Message {
     private String messageid;
     private String texto;
     private String userid;
+    private String username;
     private String expiracion;
     private String estado;
     private String media;
