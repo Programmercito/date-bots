@@ -62,7 +62,8 @@ public class ReceiverForProcess {
         if ("start".equals(user.getComando())) {
             if ("/start".equals(update.getText())) {
                 sender.send(update.getChatid(),
-                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo");
+                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. Puedes enviar mensajes de texto, fotos📸🖼️📷, emojis 😊 y usar negritas para resaltar lo importante. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                        true);
                 user.setComando("start");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
@@ -76,7 +77,6 @@ public class ReceiverForProcess {
             } else if ("/publicar".equals(update.getText()) && update.getUser() == null) {
                 sender.send(user.getChatid(),
                         "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
-                user.setComando("publicar");
             } else if (update.getText().startsWith("/aprobar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
                 String idc = partes[1] + "_" + partes[2];
@@ -86,7 +86,8 @@ public class ReceiverForProcess {
                 messageService.save(msg);
                 sender.send(update.getChatid(), "Mensaje aprobado con exito.");
                 sender.send(msg.getUserid(),
-                        "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
+                        "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo",
+                        true);
 
             } else if (update.getText().startsWith("/rechazar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
@@ -113,7 +114,10 @@ public class ReceiverForProcess {
                         "¡No hay problema! 😊👍 Tu publicación ha sido cancelada. Si quieres intentarlo de nuevo, solo escribe /publicar. ¡Estamos aquí para ayudarte a conectar con nuevas personas y vivir momentos geniales! 🌈🤩🎉💬");
                 user.setComando("start");
             } else {
-                if (!validarTiempos()) {
+                if (update.getUser() == null) {
+                    sender.send(user.getChatid(),
+                            "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 ¡Te esperamos! 🤗");
+                } else if (!validarTiempos()) {
                     sender.send(user.getChatid(),
                             "¡Ups! 😅⏳ En este momento no es posible publicar mensajes. Por favor, intenta más tarde. ¡No te desanimes, tu oportunidad de hacer nuevos amigos llegará pronto! 💖🤞🌟✨");
                 } else {
@@ -122,13 +126,15 @@ public class ReceiverForProcess {
                         //String media = update.getMedias() == null ? null : update.getMedias()[0];
                         sender.sendChannel(update.getChatid(), update.getText(), update.getUser(), null);
                         sender.send(user.getChatid(),
-                                "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo");
+                                "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo",
+                                true);
                     } else {
                         String media = update.getMedias() == null ? null : update.getMedias()[0];
                         sender.send(adminid, update.getText() + "|" + update.getUser() + "|" + update.getChatid(),
                                 "aprobacion", media, null);
                         sender.send(user.getChatid(),
-                                "Tu mensaje ha sido enviado a los administradores para su revisión. Te avisaremos cuando sea aprobado. ¡Gracias por tu paciencia! 🙏😊✨ Si quieres volver a publicar, solo escribe /publicar. ¡Estamos aquí para ayudarte a conectar con nuevas personas y vivir momentos geniales! 🌈🤩🎉💬");
+                                "Tu mensaje ha sido enviado a los administradores para su revisión. Te avisaremos cuando sea aprobado. ¡Gracias por tu paciencia! 🙏😊✨ Si quieres volver a publicar, solo escribe /publicar. ¡Estamos aquí para ayudarte a conectar con nuevas personas y vivir momentos geniales! 🌈🤩🎉💬",
+                                true);
 
                     }
 

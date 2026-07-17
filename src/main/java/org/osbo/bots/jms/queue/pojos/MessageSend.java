@@ -9,4 +9,5 @@ public class MessageSend {
     public String[] medias;
     public String tipo;
     public String msgid;
+    public boolean disableNotification;
 }
