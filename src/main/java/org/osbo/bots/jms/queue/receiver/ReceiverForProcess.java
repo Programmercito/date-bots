@@ -62,7 +62,7 @@ public class ReceiverForProcess {
         if ("start".equals(user.getComando())) {
             if ("/start".equals(update.getText())) {
                 sender.send(update.getChatid(),
-                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. Puedes enviar mensajes de texto, fotos📸🖼️📷, emojis 😊 y usar negritas para resaltar lo importante. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
                         true);
                 user.setComando("start");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
