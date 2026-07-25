@@ -64,6 +64,11 @@ public class NqueueForSend {
 
     public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
             boolean disableNotification, List<List<Button>> buttons) {
+        this.send(chatid, text, tipo, photo, msgid, disableNotification, buttons, null);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
+            boolean disableNotification, List<List<Button>> buttons, String targetProfileChatid) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setText(text);
@@ -71,6 +76,7 @@ public class NqueueForSend {
         message.setMsgid(msgid);
         message.setDisableNotification(disableNotification);
         message.setButtons(buttons);
+        message.setTargetProfileChatid(targetProfileChatid);
         if (photo != null) {
             message.setMedias(new String[1]);
             message.getMedias()[0] = photo;

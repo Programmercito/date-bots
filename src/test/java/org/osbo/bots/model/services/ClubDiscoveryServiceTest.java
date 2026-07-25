@@ -107,7 +107,7 @@ class ClubDiscoveryServiceTest {
         assertThat(user.getCurrentProfileMessageId()).isNull();
         assertThat(user.getPreviousProfileMessageId()).isNull();
         verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), eq(target.getPhotoFileId()),
-                eq((String) null), eq(false), any(List.class));
+                eq((String) null), eq(false), any(List.class), eq(target.getChatid()));
         verify(jmsTemplate).convertAndSend(eq("queue.analytics"), any(AnalyticsMessage.class));
     }
 
@@ -144,7 +144,7 @@ class ClubDiscoveryServiceTest {
         ArgumentCaptor<String> chatidCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         verify(sender).send(chatidCaptor.capture(), anyString(), eq("discovery_profile"), photoCaptor.capture(),
-                eq((String) null), eq(false), any(List.class));
+                eq((String) null), eq(false), any(List.class), eq(femaleHetero.getChatid()));
         assertThat(chatidCaptor.getValue()).isEqualTo(VIEWER_CHATID);
         assertThat(photoCaptor.getValue()).isEqualTo(femaleHetero.getPhotoFileId());
     }
@@ -177,7 +177,7 @@ class ClubDiscoveryServiceTest {
 
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), photoCaptor.capture(),
-                eq((String) null), eq(false), any(List.class));
+                eq((String) null), eq(false), any(List.class), eq(maleHetero.getChatid()));
         assertThat(photoCaptor.getValue()).isEqualTo(maleHetero.getPhotoFileId());
     }
 
@@ -217,7 +217,7 @@ class ClubDiscoveryServiceTest {
 
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), photoCaptor.capture(),
-                eq((String) null), eq(false), any(List.class));
+                eq((String) null), eq(false), any(List.class), eq(femaleHetero.getChatid()));
         assertThat(photoCaptor.getValue()).isEqualTo(femaleHetero.getPhotoFileId());
     }
 
@@ -417,7 +417,7 @@ class ClubDiscoveryServiceTest {
         profile.setDescription("Friendly");
         profile.setTastes("Music");
         profile.setTraits("Funny");
-        profile.setLookingFor("Friends");
+        profile.setLookingFor(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
         profile.setPhotoFileId("photo-" + chatid);
         profile.setStatus(ClubDiscoveryService.STATUS_APPROVED);
         return profile;

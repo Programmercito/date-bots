@@ -19,4 +19,10 @@ public class MessageSend {
      * Telegram message ID for editing/deleting existing messages.
      */
     public Integer messageId;
+
+    /**
+     * Target profile chat ID for discovery_profile messages.
+     * Used to deactivate the profile when its photo file_id is broken.
+     */
+    public String targetProfileChatid;
 }

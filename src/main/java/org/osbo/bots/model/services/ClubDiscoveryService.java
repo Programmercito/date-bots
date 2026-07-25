@@ -143,7 +143,7 @@ public class ClubDiscoveryService {
         String caption = buildProfileCaption(next);
         List<List<Button>> buttons = buildProfileButtons(next);
         sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
-                buttons);
+                buttons, next.getChatid());
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
     }

@@ -1,11 +1,14 @@
 package org.osbo.bots.jms.queue.receiver;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageSend;
 import org.osbo.bots.model.entity.Message;
+import org.osbo.bots.model.entity.Profile;
 import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
@@ -29,10 +32,14 @@ import com.pengrad.telegrambot.response.SendResponse;
 public class ReceiverForSend {
     MessageService messageservice;
     UserService userService;
+    ProfileRepository profileRepository;
 
-    ReceiverForSend(MessageService messageService, UserService userService) {
+    private TelegramBot telegramBot;
+
+    ReceiverForSend(MessageService messageService, UserService userService, ProfileRepository profileRepository) {
         this.messageservice = messageService;
         this.userService = userService;
+        this.profileRepository = profileRepository;
     }
 
     @Value("${telegram.token}")
@@ -40,11 +47,22 @@ public class ReceiverForSend {
     @Value("${telegram.channel}")
     private String chatidchannel;
 
+    private TelegramBot getTelegramBot() {
+        if (telegramBot == null) {
+            telegramBot = new TelegramBot(token);
+        }
+        return telegramBot;
+    }
+
+    void setTelegramBotForTest(TelegramBot bot) {
+        this.telegramBot = bot;
+    }
+
     @JmsListener(destination = "queue.send", containerFactory = "myFactory")
     public void sendMessage(MessageSend message) {
         Sleep.sleep1seg();
         System.out.println("llegando a cola de envio");
-        TelegramBot bot = new TelegramBot(token);
+        TelegramBot bot = getTelegramBot();
         String destinatario = message.getChatid();
         if ("channel".equals(message.getTipo())) {
             destinatario = chatidchannel;
@@ -168,6 +186,32 @@ public class ReceiverForSend {
             System.out.println("Mensaje enviado");
         } else {
             System.out.println("Error al enviar mensaje");
+            if ("discovery_profile".equals(message.getTipo())) {
+                handleBrokenDiscoveryPhoto(message, bot);
+            }
+        }
+    }
+
+    private void handleBrokenDiscoveryPhoto(MessageSend message, TelegramBot bot) {
+        String targetChatid = message.getTargetProfileChatid();
+        if (targetChatid == null || targetChatid.isBlank()) {
+            return;
+        }
+        Profile profile = profileRepository.findByChatid(targetChatid);
+        if (profile == null) {
+            return;
+        }
+        profile.setStatus("REJECTED");
+        profile.setUpdatedAt(OffsetDateTime.now().toString());
+        profileRepository.save(profile);
+
+        String ownerNotification = "Tu foto de perfil no pudo enviarse. Tu perfil fue desactivado del club. Si querés volver, escribí /club.";
+        bot.execute(new SendMessage(targetChatid, ownerNotification));
+
+        String viewerChatid = message.getChatid();
+        if (viewerChatid != null && !viewerChatid.equals(targetChatid)) {
+            bot.execute(new SendMessage(viewerChatid,
+                    "No se pudo mostrar un perfil. Continuá con /ver_personas."));
         }
     }
 
