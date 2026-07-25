@@ -9,6 +9,7 @@ import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.services.ClubRegistrationService;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
@@ -21,6 +22,7 @@ public class ReceiverForProcess {
     NqueueForSend sender;
     UserService userService;
     MessageService messageService;
+    ClubRegistrationService clubRegistrationService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -37,11 +39,12 @@ public class ReceiverForProcess {
     @Value("${telegram.admin}")
     private String adminid;
 
-    ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService) {
+    ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
+            ClubRegistrationService clubRegistrationService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
-
+        this.clubRegistrationService = clubRegistrationService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -64,12 +67,15 @@ public class ReceiverForProcess {
             return;
         }
         if ("start".equals(user.getComando())) {
-            if ("/start".equals(update.getText())) {
+            if (clubRegistrationService.handle(user, update)) {
+                // club command or registration step handled by the service
+            } else if ("/start".equals(update.getText())) {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("✏️ Publicar", "/publicar"),
-                                new Button("📢 Ver canal", "/ver_canal")));
+                                new Button("📢 Ver canal", "/ver_canal"),
+                                new Button("🤝 Entrar al club de amistad", "/club")));
                 sender.send(update.getChatid(),
-                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
                         true, buttons);
                 user.setComando("start");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
@@ -89,6 +95,15 @@ public class ReceiverForProcess {
                         "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
             } else if ("/ver_canal".equals(update.getText())) {
                 sender.send(user.getChatid(), "Nuestro canal es: https://t.me/amistadbo");
+            } else if ("/ver_personas".equals(update.getText())) {
+                sender.send(user.getChatid(),
+                        "Ver personas estará disponible pronto. Cuando tu perfil sea aprobado, podrás descubrir nuevos amigos.");
+            } else if ("/editar_perfil".equals(update.getText())) {
+                sender.send(user.getChatid(), "Editar perfil estará disponible pronto.");
+            } else if ("/pausar_perfil".equals(update.getText())) {
+                sender.send(user.getChatid(), "Pausar perfil estará disponible pronto.");
+            } else if ("/activar_perfil".equals(update.getText())) {
+                sender.send(user.getChatid(), "Activar perfil estará disponible pronto.");
             } else if (update.getText().startsWith("/aprobar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
                 String idc = partes[1] + "_" + partes[2];
