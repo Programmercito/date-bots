@@ -66,10 +66,12 @@ public class ReceiverForProcess {
                     "Lo sentimos, no puedes usar el bot porque tu cuenta ha sido inactivada por denuncias de otros usuarios. hasta luego");
             return;
         }
+        if (clubRegistrationService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
         if ("start".equals(user.getComando())) {
-            if (clubRegistrationService.handle(user, update)) {
-                // club command or registration step handled by the service
-            } else if ("/start".equals(update.getText())) {
+            if ("/start".equals(update.getText())) {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("✏️ Publicar", "/publicar"),
                                 new Button("📢 Ver canal", "/ver_canal"),
