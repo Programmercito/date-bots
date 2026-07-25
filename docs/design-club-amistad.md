@@ -307,41 +307,44 @@ The bot uses a state machine stored in `users.comando`.
 
 ## 11. Implementation Phases
 
-### Phase 1 — Foundation
+### Phase 1 — Foundation ✅
 - Enable SQLite WAL mode.
 - Create `Profile`, `Like`, `Report`, `DailyLimit`, `UserPlan` entities.
 - Extend `User` entity with `rol` and `created_at`.
 - Add new JMS queues: `queue.like`, `queue.match`, `queue.moderation`, `queue.analytics`.
 - Create queue consumers skeletons.
 
-### Phase 2 — Registration
+### Phase 2 — Registration ✅
 - Implement `/club` command and registration flow.
 - Validate age >= 18.
 - Validate allowed gender/orientation combinations.
 - Save profile as `PENDING`.
 - Send new profile to admin via `queue.moderation`.
+- Registration uses predefined "looking for" buttons (Amistad, Relación, Relación online, Relación sugar daddy, Relación de enamorados).
 
-### Phase 3 — Admin Moderation
+### Phase 3 — Admin Moderation ✅
 - Admin receives profile with approve/reject/block buttons.
 - Approve enables discovery.
 - Reject/block notify user.
 
-### Phase 4 — Discovery
+### Phase 4 — Discovery ✅
 - `/ver_personas` command.
 - Query approved profiles matching filters, excluding self and already seen/liked.
 - Send one profile per message with photo + buttons.
+- Like/skip edits the same message; next profile sends a new message and deletes the previous one.
+- Broken `file_id` during discovery automatically deactivates the profile (`REJECTED`), notifies the owner, and allows re-registration with `/club`.
 
-### Phase 5 — Likes & Matches
+### Phase 5 — Likes & Matches (NOT YET IMPLEMENTED)
 - Like callback sends to `queue.like`.
 - Consumer detects mutual match and sends to `queue.match`.
 - Match consumer notifies both users with Telegram usernames.
 
-### Phase 6 — Daily Limits & Reports
+### Phase 6 — Daily Limits & Reports (NOT YET IMPLEMENTED)
 - Track likes/views in `daily_limits` via `queue.analytics`.
 - Add report button and `reports` table.
 - Add `/mis_matches` command.
 
-### Phase 7 — Edit / Pause / Payment-Ready Hooks
+### Phase 7 — Edit / Pause / Payment-Ready Hooks (NOT YET IMPLEMENTED)
 - Edit profile flow.
 - Pause/activate profile.
 - Create `user_plans` table and helper methods.

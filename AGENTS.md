@@ -259,11 +259,19 @@ All changes must keep the existing tests passing.
 
 Payments are **not implemented**. The `user_plans` table exists only as preparation. All users are currently `FREE` and have no limits.
 
-## 14. TODO / Next Phases
+## 14. TODO / Remaining Phases
 
-- Phase 5: Match notifications.
-- Phase 6: Daily limits, reports, `/mis_matches`.
-- Phase 7: Edit/pause profile.
+Already implemented:
+- Phase 1: Foundation (data model, SQLite WAL, JMS queues).
+- Phase 2: Registration (`/club`) with age and gender/orientation validation.
+- Phase 3: Admin moderation (approve/reject/block).
+- Phase 4: Discovery (`/ver_personas`) with like/skip/report UX rule.
+- Registration uses predefined "looking for" buttons and broken `file_id` deactivates the profile.
+
+Still to implement:
+- Phase 5: Likes processing and mutual match detection (`queue.like`, `queue.match`).
+- Phase 6: Daily limits enforcement, reports handling, `/mis_matches`.
+- Phase 7: Edit/pause profile flows.
 - Future: payment integration.
 
 ## 15. Common Pitfalls
