@@ -256,7 +256,6 @@ public class ClubRegistrationService {
                         new Button("Mujer", CALLBACK_GENDER_FEMALE),
                         new Button("Otro", CALLBACK_GENDER_OTHER)));
         sender.send(update.getChatid(), "Seleccioná tu género:", true, buttons);
-        answerCallback(update);
     }
 
     private void handleGender(User user, MessageUpdate update) {
@@ -279,7 +278,6 @@ public class ClubRegistrationService {
                 Arrays.asList(new Button("Hetero", CALLBACK_ORIENTATION_HETERO),
                         new Button("Bi", CALLBACK_ORIENTATION_BI)));
         sender.send(update.getChatid(), "Seleccioná tu orientación:", true, buttons);
-        answerCallback(update);
     }
 
     private void askForGender(String chatid) {
@@ -311,13 +309,11 @@ public class ClubRegistrationService {
             sender.send(update.getChatid(),
                     "Por ahora el club solo acepta los siguientes perfiles: hombre hetero, mujer hetero o mujer bi."
                             + " Si querés, podés volver a intentar con /club.");
-            answerCallback(update);
             return;
         }
 
         user.setComando(STATE_REGISTER_CITY);
         sender.send(update.getChatid(), "¿En qué ciudad de Bolivia estás?");
-        answerCallback(update);
     }
 
     private void askForOrientation(String chatid) {
@@ -462,7 +458,6 @@ public class ClubRegistrationService {
         } else {
             sendPreview(update.getChatid(), profile);
         }
-        answerCallback(update);
     }
 
     private void confirmRegistration(User user, MessageUpdate update, Profile profile) {
@@ -550,12 +545,6 @@ public class ClubRegistrationService {
 
     private boolean isEmptyText(MessageUpdate update) {
         return update.getText() == null || update.getText().isBlank();
-    }
-
-    private void answerCallback(MessageUpdate update) {
-        if (update.getCallbackQueryId() != null && !update.getCallbackQueryId().isBlank()) {
-            sender.answerCallbackQuery(update.getCallbackQueryId());
-        }
     }
 
     private String buildProfilePreview(Profile profile) {
