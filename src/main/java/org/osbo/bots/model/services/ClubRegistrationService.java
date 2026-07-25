@@ -122,7 +122,14 @@ public class ClubRegistrationService {
             case STATUS_APPROVED -> sendApprovedStatus(update.getChatid(), profile);
             case STATUS_PENDING -> sender.send(update.getChatid(),
                     "Tu perfil está pendiente de aprobación. Te avisamos cuando sea aprobado.");
-            case STATUS_REJECTED -> sendRejectedStatus(update.getChatid(), profile);
+            case STATUS_REJECTED -> {
+                if (CALLBACK_CLUB_ENTER.equals(update.getText())) {
+                    profileRepository.delete(profile);
+                    startRegistration(user, update);
+                } else {
+                    sendRejectedStatus(update.getChatid(), profile);
+                }
+            }
             case STATUS_PAUSED -> sendPausedStatus(update.getChatid(), profile);
             default -> startRegistration(user, update);
         }

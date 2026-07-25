@@ -172,6 +172,22 @@ class ClubRegistrationServiceTest {
         verify(sender).send(eq(CHATID), any(), eq(true), any(List.class));
     }
 
+    @Test
+    void shouldAllowReRegistrationAfterRejection() {
+        User user = newUser("start");
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_REJECTED);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+        when(profileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        boolean handled = service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_CLUB_ENTER, USERNAME));
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_NAME);
+        verify(profileRepository).delete(profile);
+        verify(profileRepository).save(any());
+    }
+
     private User newUser(String comando) {
         User user = new User();
         user.setChatid(CHATID);
