@@ -18,4 +18,28 @@ public class ModerationMessage {
 
     private String reason;
 
+    private String name;
+
+    private Integer age;
+
+    private String gender;
+
+    private String orientation;
+
+    private String country;
+
+    private String city;
+
+    private String description;
+
+    private String tastes;
+
+    private String traits;
+
+    private String lookingFor;
+
+    private String photoFileId;
+
+    private String contactUsername;
+
 }
