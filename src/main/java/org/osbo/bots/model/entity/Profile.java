@@ -1,0 +1,65 @@
+package org.osbo.bots.model.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+/**
+ * Friendship club profile linked to a {@link User}.
+ */
+@Entity
+@Table(name = "profiles")
+@Data
+public class Profile {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "chatid", unique = true, nullable = false)
+    private String chatid;
+
+    private String name;
+
+    private Integer age;
+
+    private String gender;
+
+    private String orientation;
+
+    private String country;
+
+    private String city;
+
+    @Column(name = "description")
+    private String description;
+
+    private String tastes;
+
+    private String traits;
+
+    @Column(name = "looking_for")
+    private String lookingFor;
+
+    @Column(name = "photo_file_id")
+    private String photoFileId;
+
+    @Column(name = "contact_username")
+    private String contactUsername;
+
+    /**
+     * Profile status: PENDING, APPROVED, REJECTED, PAUSED.
+     */
+    private String status;
+
+    @Column(name = "created_at")
+    private String createdAt;
+
+    @Column(name = "updated_at")
+    private String updatedAt;
+
+}
