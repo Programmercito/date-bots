@@ -24,6 +24,7 @@ public class MessageProcessor {
             message.setText(update.callbackQuery().data());
             message.setUser(update.callbackQuery().from().username());
             message.setCallbackQueryId(update.callbackQuery().id());
+            message.setMessageId(update.callbackQuery().message().messageId());
             sender.answerCallbackQuery(update.callbackQuery().id());
             this.processMessage.process(message);
             return;

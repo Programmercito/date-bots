@@ -31,4 +31,18 @@ public class User {
     @Column(name = "created_at")
     private String createdAt;
 
+    /**
+     * Telegram message ID of the profile currently shown in discovery or the
+     * confirmation shown after like/skip/report.
+     */
+    @Column(name = "current_profile_message_id")
+    private Integer currentProfileMessageId;
+
+    /**
+     * Telegram message ID of the previous discovery message, to be deleted before
+     * showing the next profile.
+     */
+    @Column(name = "previous_profile_message_id")
+    private Integer previousProfileMessageId;
+
 }

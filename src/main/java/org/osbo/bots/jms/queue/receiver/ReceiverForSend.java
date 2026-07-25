@@ -5,7 +5,9 @@ import java.util.List;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageSend;
 import org.osbo.bots.model.entity.Message;
+import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.MessageService;
+import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.Sleep;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +18,7 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
+import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.EditMessageCaption;
 import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -25,9 +28,11 @@ import com.pengrad.telegrambot.response.SendResponse;
 @Component
 public class ReceiverForSend {
     MessageService messageservice;
+    UserService userService;
 
-    ReceiverForSend(MessageService messageService) {
+    ReceiverForSend(MessageService messageService, UserService userService) {
         this.messageservice = messageService;
+        this.userService = userService;
     }
 
     @Value("${telegram.token}")
@@ -50,6 +55,31 @@ public class ReceiverForSend {
         }
 
         InlineKeyboardMarkup markup = buildMarkup(message.getButtons());
+
+        if ("edit_text".equals(message.getTipo())) {
+            EditMessageText edit = new EditMessageText(message.getChatid(), message.getMessageId(), message.getText());
+            if (markup != null) {
+                edit.replyMarkup(markup);
+            }
+            bot.execute(edit);
+            return;
+        }
+
+        if ("edit_caption".equals(message.getTipo())) {
+            EditMessageCaption edit = new EditMessageCaption(message.getChatid(), message.getMessageId());
+            edit.caption(message.getText());
+            if (markup != null) {
+                edit.replyMarkup(markup);
+            }
+            bot.execute(edit);
+            return;
+        }
+
+        if ("delete".equals(message.getTipo())) {
+            bot.execute(new DeleteMessage(message.getChatid(), message.getMessageId()));
+            return;
+        }
+
         SendResponse response;
         if (message.getMedias() == null) {
             SendMessage sendMessage = new SendMessage(destinatario, message.getText());
@@ -127,6 +157,13 @@ public class ReceiverForSend {
                 }
 
                 messageservice.save(msg);
+            } else if ("discovery_profile".equals(message.getTipo())) {
+                int id = response.message().messageId();
+                User user = userService.findById(message.getChatid());
+                if (user != null) {
+                    user.setCurrentProfileMessageId(id);
+                    userService.save(user);
+                }
             }
             System.out.println("Mensaje enviado");
         } else {

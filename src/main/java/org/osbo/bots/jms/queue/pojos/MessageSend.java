@@ -14,4 +14,9 @@ public class MessageSend {
     public boolean disableNotification;
     public String callbackQueryId;
     public List<List<Button>> buttons;
+
+    /**
+     * Telegram message ID for editing/deleting existing messages.
+     */
+    public Integer messageId;
 }

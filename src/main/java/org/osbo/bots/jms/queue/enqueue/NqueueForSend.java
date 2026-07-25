@@ -84,4 +84,42 @@ public class NqueueForSend {
         message.setCallbackQueryId(callbackQueryId);
         jmsTemplate.convertAndSend("queue.send", message);
     }
+
+    public void editMessage(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text) {
+        editMessage(chatid, messageId, text, null);
+    }
+
+    public void editMessage(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setTipo("edit_text");
+        message.setMessageId(messageId);
+        message.setText(text);
+        message.setButtons(buttons);
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
+    public void editCaption(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text) {
+        editCaption(chatid, messageId, text, null);
+    }
+
+    public void editCaption(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setTipo("edit_caption");
+        message.setMessageId(messageId);
+        message.setText(text);
+        message.setButtons(buttons);
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
+    public void deleteMessage(@NonNull String chatid, @NonNull Integer messageId) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setTipo("delete");
+        message.setMessageId(messageId);
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
 }
