@@ -114,8 +114,9 @@ class ClubRegistrationServiceTest {
         service.handle(user, newUpdate("Honest, funny", USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
 
-        service.handle(user, newUpdate("Friends", USERNAME));
+        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_LOOKING_FOR_FRIENDSHIP, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PHOTO);
+        assertThat(profile.getLookingFor()).isEqualTo(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
 
         MessageUpdate photoUpdate = newUpdate(null, USERNAME);
         photoUpdate.setMedias(new String[] { "photo-file-id" });
@@ -144,6 +145,31 @@ class ClubRegistrationServiceTest {
 
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_AGE);
         verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectInvalidLookingForCallbackAndResendButtons() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
+        Profile profile = newIncompleteProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, newUpdate("invalid_callback", USERNAME));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
+        verify(sender).send(eq(CHATID), any(), eq(true), any(List.class));
+        verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldTranslateLookingForInPreview() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
+        Profile profile = newIncompleteProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_LOOKING_FOR_LOVERS, USERNAME));
+
+        assertThat(profile.getLookingFor()).isEqualTo(ClubRegistrationService.LOOKING_FOR_LOVERS);
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PHOTO);
     }
 
     @Test
