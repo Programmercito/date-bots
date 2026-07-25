@@ -6,7 +6,7 @@ This document describes the architecture and implementation plan for adding a **
 
 The existing bot allows users to publish ephemeral messages to a channel. The new feature adds:
 
-- User profile registration (name, age, gender, orientation, location, description, tastes, traits, what they are looking for, photo).
+- User profile registration (name, age, gender, orientation, location, description, tastes, traits, what they are looking for chosen from predefined buttons, photo).
 - Discovery of other profiles, one at a time.
 - Like/skip interaction.
 - Mutual-like match that reveals the Telegram username of both users.
@@ -83,7 +83,7 @@ spring.datasource.hikari.minimum-idle=2
 | `description` | TEXT | Self description |
 | `tastes` | TEXT | Comma-separated or free text |
 | `traits` | TEXT | Comma-separated or free text |
-| `looking_for` | TEXT | What the user wants |
+| `looking_for` | TEXT | What the user wants: `FRIENDSHIP`, `RELATIONSHIP`, `ONLINE_RELATIONSHIP`, `SUGAR_DADDY`, `LOVERS` |
 | `photo_file_id` | TEXT | Telegram file_id used to forward the photo |
 | `contact_username` | TEXT | Telegram username for matches |
 | `status` | TEXT | `PENDING`, `APPROVED`, `REJECTED`, `PAUSED` |
@@ -161,7 +161,7 @@ The bot uses a state machine stored in `users.comando`.
 | `club_register_description` | Asking for description |
 | `club_register_tastes` | Asking for tastes |
 | `club_register_traits` | Asking for traits |
-| `club_register_looking_for` | Asking for what they want |
+| `club_register_looking_for` | Asking for what they want (predefined buttons) |
 | `club_register_photo` | Waiting for profile photo |
 | `club_register_preview` | Showing preview before submission |
 | `club_browsing` | Browsing discovery profiles |
@@ -217,7 +217,7 @@ The bot uses a state machine stored in `users.comando`.
 9. Bot asks for `description`.
 10. Bot asks for `tastes`.
 11. Bot asks for `traits`.
-12. Bot asks for `looking_for`.
+12. Bot asks for `looking_for` using predefined buttons. Stored values are `FRIENDSHIP`, `RELATIONSHIP`, `ONLINE_RELATIONSHIP`, `SUGAR_DADDY`, `LOVERS` (button labels are Spanish).
 13. Bot asks for `photo`.
 14. Bot shows preview.
 15. User confirms → profile saved with status `PENDING` and sent to `queue.moderation`.
@@ -228,7 +228,8 @@ The bot uses a state machine stored in `users.comando`.
 1. User taps **"Ver personas"** (`/ver_personas`).
 2. System picks the next unseen approved profile matching the user's filters.
 3. Bot sends the profile as a photo with caption and inline buttons: **Like**, **Skip**, **Report**.
-4. `views_used` is incremented via `queue.analytics`.
+4. If the profile photo `file_id` is broken/expired and the send fails, the target profile is marked `REJECTED`, the owner is notified to re-register with `/club`, and the viewer is asked to continue with `/ver_personas`.
+5. `views_used` is incremented via `queue.analytics`.
 5. On **Skip**: show next profile.
 6. On **Like**: send to `queue.like`, respond immediately "Guardado".
 7. On **Report**: save report and notify admin via `queue.moderation`.
@@ -350,7 +351,7 @@ The bot uses a state machine stored in `users.comando`.
 
 - **SQLite at scale**: if the club grows beyond a few hundred concurrent users, migration to PostgreSQL should be reconsidered.
 - **Moderation bottleneck**: manual approval does not scale. Future phases may need auto-approval with report-based review.
-- **Telegram file_id expiration**: Telegram file IDs are long-lived but not guaranteed forever. If a photo stops loading, the user may need to re-upload.
+- **Telegram file_id expiration**: Telegram file IDs are long-lived but not guaranteed forever. If a photo stops loading during discovery, the profile is automatically deactivated (`REJECTED`), the owner is notified, and the user can re-register with `/club`.
 - **Limited orientation/gender options**: enforced in code; may require customer support for edge cases.
 
 ---

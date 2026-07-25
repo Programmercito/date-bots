@@ -136,7 +136,7 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 ### 8.1 Registration
 
 1. User taps **Entrar al club de amistad** (`/club`).
-2. Bot asks for: name, age, gender, orientation, city, description, tastes, traits, looking for, photo.
+2. Bot asks for: name, age, gender, orientation, city, description, tastes, traits, looking for (predefined buttons), photo.
 3. Validates:
    - Age >= 18.
    - Telegram username is set.
@@ -151,6 +151,18 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 3. `ClubModerationService` updates the profile/user and notifies both parties.
 
 ### 8.3 Discovery & Likes (UX Rule)
+
+**Predefined "looking for" options (Spanish label → stored value):**
+
+- "Amistad" → `FRIENDSHIP`
+- "Relación" → `RELATIONSHIP`
+- "Relación online" → `ONLINE_RELATIONSHIP`
+- "Relación sugar daddy" → `SUGAR_DADDY`
+- "Relación de enamorados" → `LOVERS`
+
+**Broken/expired photo `file_id` handling:**
+
+If forwarding a profile photo during discovery fails because the `file_id` is invalid, the target profile is marked `REJECTED` (deactivated), the owner is notified, and the viewer can continue with `/ver_personas`. The owner can re-register with `/club`.
 
 **Important UX rule for the discovery flow:**
 
@@ -249,7 +261,6 @@ Payments are **not implemented**. The `user_plans` table exists only as preparat
 
 ## 14. TODO / Next Phases
 
-- Phase 4: Discovery (`/ver_personas`) with like/skip UX rule above.
 - Phase 5: Match notifications.
 - Phase 6: Daily limits, reports, `/mis_matches`.
 - Phase 7: Edit/pause profile.
