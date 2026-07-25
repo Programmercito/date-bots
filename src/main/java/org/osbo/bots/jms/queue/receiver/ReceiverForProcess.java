@@ -9,6 +9,7 @@ import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.services.ClubModerationService;
 import org.osbo.bots.model.services.ClubRegistrationService;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
@@ -23,6 +24,7 @@ public class ReceiverForProcess {
     UserService userService;
     MessageService messageService;
     ClubRegistrationService clubRegistrationService;
+    ClubModerationService clubModerationService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -40,11 +42,12 @@ public class ReceiverForProcess {
     private String adminid;
 
     ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
-            ClubRegistrationService clubRegistrationService) {
+            ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
         this.clubRegistrationService = clubRegistrationService;
+        this.clubModerationService = clubModerationService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -64,6 +67,10 @@ public class ReceiverForProcess {
         if (user.getEstado().equals("bloqueado")) {
             sender.send(update.getChatid(),
                     "Lo sentimos, no puedes usar el bot porque tu cuenta ha sido inactivada por denuncias de otros usuarios. hasta luego");
+            return;
+        }
+        if (handleModerationCommand(update)) {
+            userService.save(user);
             return;
         }
         if (clubRegistrationService.handle(user, update)) {
@@ -132,12 +139,6 @@ public class ReceiverForProcess {
                         "Tu mensaje ha sido rechazado por los administradores, ten cuidado con lo que solicitas o podrias ser bloqueado, puedes volver a intentarlo mas tarde.",
                         buttons);
                 sender.send(update.getChatid(), "Mensaje rechazado con exito.");
-            } else if (update.getText().startsWith("/bloquear_") && adminid.equals(update.getChatid())) {
-                String[] partes = update.getText().split("_");
-                User us = userService.findById(partes[1]);
-                us.setEstado("bloqueado");
-                userService.save(us);
-                sender.send(update.getChatid(), "Usuario bloqueado con exito.");
             } else {
                 sender.send(user.getChatid(),
                         "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
@@ -190,6 +191,26 @@ public class ReceiverForProcess {
                     "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
         }
         userService.save(user);
+    }
+
+    private boolean handleModerationCommand(MessageUpdate update) {
+        String text = update.getText();
+        if (text == null || !adminid.equals(update.getChatid())) {
+            return false;
+        }
+        if (text.startsWith("/aprobar_perfil_")) {
+            String targetChatid = text.substring("/aprobar_perfil_".length());
+            return clubModerationService.approveProfile(update.getChatid(), targetChatid);
+        }
+        if (text.startsWith("/rechazar_perfil_")) {
+            String targetChatid = text.substring("/rechazar_perfil_".length());
+            return clubModerationService.rejectProfile(update.getChatid(), targetChatid);
+        }
+        if (text.startsWith("/bloquear_")) {
+            String targetChatid = text.substring("/bloquear_".length());
+            return clubModerationService.blockUser(update.getChatid(), targetChatid);
+        }
+        return false;
     }
 
     private boolean validarTiempos() {
