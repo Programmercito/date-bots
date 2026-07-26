@@ -2,6 +2,7 @@ package org.osbo.bots.model.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class RepositoryTests {
         profile.setName("Test");
         profile.setAge(25);
         profile.setStatus("PENDING");
+        profile.setWhatsapp("+591 70012345");
 
         Profile saved = profileRepository.save(profile);
         Profile found = profileRepository.findByChatid(chatid);
@@ -49,6 +51,7 @@ class RepositoryTests {
         assertThat(found).isNotNull();
         assertThat(found.getId()).isEqualTo(saved.getId());
         assertThat(found.getName()).isEqualTo("Test");
+        assertThat(found.getWhatsapp()).isEqualTo("+591 70012345");
     }
 
     @Test
@@ -64,6 +67,39 @@ class RepositoryTests {
 
         assertThat(found).isNotNull();
         assertThat(found.isMatched()).isFalse();
+    }
+
+    @Test
+    void shouldFindLikesByFromChatidOrToChatidAndMatchedTrue() {
+        String a = randomChatid();
+        String b = randomChatid();
+        String c = randomChatid();
+        String d = randomChatid();
+
+        Like fromAtoB = new Like();
+        fromAtoB.setFromChatid(a);
+        fromAtoB.setToChatid(b);
+        fromAtoB.setMatched(true);
+        likeRepository.save(fromAtoB);
+
+        Like fromCtoA = new Like();
+        fromCtoA.setFromChatid(c);
+        fromCtoA.setToChatid(a);
+        fromCtoA.setMatched(true);
+        likeRepository.save(fromCtoA);
+
+        Like fromDtoB = new Like();
+        fromDtoB.setFromChatid(d);
+        fromDtoB.setToChatid(b);
+        fromDtoB.setMatched(false);
+        likeRepository.save(fromDtoB);
+
+        List<Like> matches = likeRepository.findByFromChatidOrToChatidAndMatchedTrue(a);
+
+        assertThat(matches).hasSize(2);
+        assertThat(matches)
+                .allMatch(like -> like.isMatched()
+                        && (a.equals(like.getFromChatid()) || a.equals(like.getToChatid())));
     }
 
     @Test

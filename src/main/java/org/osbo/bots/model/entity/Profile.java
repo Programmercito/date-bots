@@ -52,6 +52,11 @@ public class Profile {
     private String contactUsername;
 
     /**
+     * Optional WhatsApp number used as an alternative contact method.
+     */
+    private String whatsapp;
+
+    /**
      * Profile status: PENDING, APPROVED, REJECTED, PAUSED.
      */
     private String status;

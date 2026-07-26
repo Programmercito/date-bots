@@ -121,8 +121,12 @@ class ClubRegistrationServiceTest {
         MessageUpdate photoUpdate = newUpdate(null, USERNAME);
         photoUpdate.setMedias(new String[] { "photo-file-id" });
         service.handle(user, photoUpdate);
-        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PREVIEW);
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CONTACT);
         assertThat(profile.getPhotoFileId()).isEqualTo("photo-file-id");
+
+        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_CONTACT_TELEGRAM, USERNAME));
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PREVIEW);
+        assertThat(profile.getContactUsername()).isEqualTo(USERNAME);
 
         service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_PREVIEW_OK, USERNAME));
         assertThat(user.getComando()).isEqualTo("start");
@@ -229,12 +233,68 @@ class ClubRegistrationServiceTest {
         return update;
     }
 
+    @Test
+    void shouldAcceptValidWhatsappNumberAtContactStep() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        Profile profile = newCompleteProfile();
+        profile.setContactUsername(null);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+        when(profileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, newUpdate("+591 700-12345", null));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PREVIEW);
+        assertThat(profile.getWhatsapp()).isEqualTo("+591 700-12345");
+    }
+
+    @Test
+    void shouldRejectInvalidWhatsappNumberAndStayInContactStep() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        Profile profile = newCompleteProfile();
+        profile.setContactUsername(null);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, newUpdate("llámame", null));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        assertThat(profile.getWhatsapp()).isNull();
+        verify(sender).send(eq(CHATID), any());
+    }
+
+    @Test
+    void shouldRejectContactStepWhenNoContactMethodAvailable() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        Profile profile = newCompleteProfile();
+        profile.setContactUsername(null);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_CONTACT_SKIP, null));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        verify(sender).send(eq(CHATID), any());
+    }
+
     private Profile newIncompleteProfile() {
         Profile profile = new Profile();
         profile.setChatid(CHATID);
         profile.setContactUsername(USERNAME);
         profile.setCountry(ClubRegistrationService.COUNTRY_BOLIVIA);
         profile.setStatus(ClubRegistrationService.STATUS_INCOMPLETE);
+        return profile;
+    }
+
+    private Profile newCompleteProfile() {
+        Profile profile = newIncompleteProfile();
+        profile.setName("Test Name");
+        profile.setAge(25);
+        profile.setGender(ClubRegistrationService.GENDER_MALE);
+        profile.setOrientation(ClubRegistrationService.ORIENTATION_HETERO);
+        profile.setCity("Santa Cruz");
+        profile.setDescription("Friendly");
+        profile.setTastes("Music");
+        profile.setTraits("Honest");
+        profile.setLookingFor(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
+        profile.setPhotoFileId("photo-id");
         return profile;
     }
 

@@ -42,4 +42,6 @@ public class ModerationMessage {
 
     private String contactUsername;
 
+    private String whatsapp;
+
 }

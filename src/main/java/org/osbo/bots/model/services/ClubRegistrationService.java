@@ -44,6 +44,9 @@ public class ClubRegistrationService {
     public static final String CALLBACK_PREVIEW_OK = "club_preview_ok";
     public static final String CALLBACK_PREVIEW_EDIT = "club_preview_edit";
 
+    public static final String CALLBACK_CONTACT_TELEGRAM = "club_contact_telegram";
+    public static final String CALLBACK_CONTACT_SKIP = "club_contact_skip";
+
     public static final String STATE_REGISTER_NAME = "club_register_name";
     public static final String STATE_REGISTER_AGE = "club_register_age";
     public static final String STATE_REGISTER_GENDER = "club_register_gender";
@@ -54,6 +57,7 @@ public class ClubRegistrationService {
     public static final String STATE_REGISTER_TRAITS = "club_register_traits";
     public static final String STATE_REGISTER_LOOKING_FOR = "club_register_looking_for";
     public static final String STATE_REGISTER_PHOTO = "club_register_photo";
+    public static final String STATE_REGISTER_CONTACT = "club_register_contact";
     public static final String STATE_REGISTER_PREVIEW = "club_register_preview";
 
     public static final String GENDER_MALE = "MALE";
@@ -204,6 +208,7 @@ public class ClubRegistrationService {
             case STATE_REGISTER_TRAITS -> handleTraits(user, update);
             case STATE_REGISTER_LOOKING_FOR -> handleLookingFor(user, update);
             case STATE_REGISTER_PHOTO -> handlePhoto(user, update);
+            case STATE_REGISTER_CONTACT -> handleContact(user, update);
             case STATE_REGISTER_PREVIEW -> handlePreview(user, update);
             default -> {
                 sender.send(update.getChatid(),
@@ -453,8 +458,96 @@ public class ClubRegistrationService {
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
 
+        user.setComando(STATE_REGISTER_CONTACT);
+        askForContact(update.getChatid(), update.getUser(), profile);
+    }
+
+    private void askForContact(String chatid, String username, Profile profile) {
+        List<List<Button>> buttons = buildContactButtons(username);
+        if (username != null && !username.isBlank()) {
+            sender.send(chatid,
+                    "Para que tus matches puedan contactarte, confirmá tu usuario de Telegram o enviá tu número de WhatsApp.\nTu usuario actual: @"
+                            + username,
+                    true, buttons);
+        } else {
+            sender.send(chatid,
+                    "Para que tus matches puedan contactarte, enviá tu número de WhatsApp.",
+                    true, buttons);
+        }
+    }
+
+    private List<List<Button>> buildContactButtons(String username) {
+        if (username != null && !username.isBlank()) {
+            return Arrays.asList(
+                    Arrays.asList(new Button("Usar Telegram @" + username, CALLBACK_CONTACT_TELEGRAM),
+                            new Button("Omitir", CALLBACK_CONTACT_SKIP)));
+        }
+        return List.of();
+    }
+
+    private void handleContact(User user, MessageUpdate update) {
+        Profile profile = requireIncompleteProfile(update.getChatid());
+        if (profile == null) {
+            restart(user, update.getChatid());
+            return;
+        }
+
+        String text = update.getText();
+        if (CALLBACK_CONTACT_TELEGRAM.equals(text)) {
+            String username = update.getUser();
+            if (username == null || username.isBlank()) {
+                sender.send(update.getChatid(),
+                        "No tengo tu usuario de Telegram. Envíá tu número de WhatsApp para continuar.");
+                return;
+            }
+            profile.setContactUsername(username);
+            profile.setUpdatedAt(isoTimestamp());
+            profileRepository.save(profile);
+            user.setComando(STATE_REGISTER_PREVIEW);
+            sendPreview(update.getChatid(), profile);
+            return;
+        }
+
+        if (CALLBACK_CONTACT_SKIP.equals(text)) {
+            if (hasContactMethod(profile)) {
+                user.setComando(STATE_REGISTER_PREVIEW);
+                sendPreview(update.getChatid(), profile);
+            } else {
+                sender.send(update.getChatid(),
+                        "Necesitamos al menos un medio de contacto para que tus matches puedan escribirte. Confirmá tu Telegram o enviá tu WhatsApp.");
+                askForContact(update.getChatid(), update.getUser(), profile);
+            }
+            return;
+        }
+
+        if (isEmptyText(update)) {
+            askForContact(update.getChatid(), update.getUser(), profile);
+            return;
+        }
+
+        String whatsapp = update.getText().trim();
+        if (!isValidWhatsapp(whatsapp)) {
+            sender.send(update.getChatid(),
+                    "El número de WhatsApp no es válido. Usá solo números, espacios, guiones y el signo +. Por ejemplo: +591 70012345.");
+            return;
+        }
+        profile.setWhatsapp(whatsapp);
+        profile.setUpdatedAt(isoTimestamp());
+        profileRepository.save(profile);
         user.setComando(STATE_REGISTER_PREVIEW);
         sendPreview(update.getChatid(), profile);
+    }
+
+    private boolean hasContactMethod(Profile profile) {
+        return (profile.getContactUsername() != null && !profile.getContactUsername().isBlank())
+                || (profile.getWhatsapp() != null && !profile.getWhatsapp().isBlank());
+    }
+
+    private boolean isValidWhatsapp(String whatsapp) {
+        if (whatsapp == null || whatsapp.isBlank()) {
+            return false;
+        }
+        return whatsapp.matches("^[+\\d\\-\\s]+$");
     }
 
     private void sendPreview(String chatid, Profile profile) {
@@ -526,6 +619,7 @@ public class ClubRegistrationService {
         message.setLookingFor(profile.getLookingFor());
         message.setPhotoFileId(profile.getPhotoFileId());
         message.setContactUsername(profile.getContactUsername());
+        message.setWhatsapp(profile.getWhatsapp());
         jmsTemplate.convertAndSend("queue.moderation", message);
     }
 
@@ -593,17 +687,25 @@ public class ClubRegistrationService {
     }
 
     private String buildProfilePreview(Profile profile) {
-        return "Así se verá tu perfil:\n\n"
-                + "Nombre: " + profile.getName() + "\n"
-                + "Edad: " + profile.getAge() + "\n"
-                + "Género: " + translateGender(profile.getGender()) + "\n"
-                + "Orientación: " + translateOrientation(profile.getOrientation()) + "\n"
-                + "Ciudad: " + profile.getCity() + "\n"
-                + "Sobre vos: " + profile.getDescription() + "\n"
-                + "Gustos: " + profile.getTastes() + "\n"
-                + "Personalidad: " + profile.getTraits() + "\n"
-                + "Buscás: " + translateLookingFor(profile.getLookingFor()) + "\n\n"
-                + "¿Confirmás que querés enviarlo a revisión?";
+        StringBuilder preview = new StringBuilder();
+        preview.append("Así se verá tu perfil:\n\n");
+        preview.append("Nombre: ").append(profile.getName()).append("\n");
+        preview.append("Edad: ").append(profile.getAge()).append("\n");
+        preview.append("Género: ").append(translateGender(profile.getGender())).append("\n");
+        preview.append("Orientación: ").append(translateOrientation(profile.getOrientation())).append("\n");
+        preview.append("Ciudad: ").append(profile.getCity()).append("\n");
+        preview.append("Sobre vos: ").append(profile.getDescription()).append("\n");
+        preview.append("Gustos: ").append(profile.getTastes()).append("\n");
+        preview.append("Personalidad: ").append(profile.getTraits()).append("\n");
+        preview.append("Buscás: ").append(translateLookingFor(profile.getLookingFor())).append("\n");
+        if (profile.getContactUsername() != null && !profile.getContactUsername().isBlank()) {
+            preview.append("Telegram: @").append(profile.getContactUsername()).append("\n");
+        }
+        if (profile.getWhatsapp() != null && !profile.getWhatsapp().isBlank()) {
+            preview.append("WhatsApp: ").append(profile.getWhatsapp()).append("\n");
+        }
+        preview.append("\n¿Confirmás que querés enviarlo a revisión?");
+        return preview.toString();
     }
 
     private String translateGender(String gender) {
