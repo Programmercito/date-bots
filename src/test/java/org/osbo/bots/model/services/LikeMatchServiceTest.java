@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -201,12 +202,16 @@ class LikeMatchServiceTest {
         service.notifyMatch(new MatchMessage("A", "B"));
 
         ArgumentCaptor<String> chatidCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(sender, times(2)).send(chatidCaptor.capture(), anyString(), eq("match_notification"),
+        verify(sender, times(2)).send(chatidCaptor.capture(), textCaptor.capture(), eq("match_notification"),
                 photoCaptor.capture(), eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null));
         assertThat(chatidCaptor.getAllValues()).containsExactly("A", "B");
         assertThat(photoCaptor.getAllValues()).containsExactly("photo-B", "photo-A");
+        String textForA = textCaptor.getAllValues().get(0);
+        assertThat(textForA).contains("Bruno, 25 años");
+        assertThat(textForA).doesNotContain("2001-03-15");
         List<List<Button>> buttonsForA = buttonsCaptor.getAllValues().get(0);
         assertThat(flattenButtons(buttonsForA)).anyMatch(b -> b.getText().contains("Telegram @bruno")
                 && "https://t.me/bruno".equals(b.getUrl()));
@@ -249,10 +254,14 @@ class LikeMatchServiceTest {
         Profile me = approvedProfile("me");
         Profile matchOne = approvedProfile("match-1");
         matchOne.setName("Carla");
+        matchOne.setBirthDate(LocalDate.of(1996, 4, 20));
+        matchOne.setAge(null);
         matchOne.setContactUsername("carla");
         matchOne.setWhatsapp("+591 70011111");
         Profile matchTwo = approvedProfile("match-2");
         matchTwo.setName("Diana");
+        matchTwo.setBirthDate(LocalDate.of(1998, 6, 15));
+        matchTwo.setAge(null);
         matchTwo.setContactUsername("diana");
         when(profileRepository.findByChatid("me")).thenReturn(me);
         Like likeOne = matchedLike("me", "match-1");
@@ -269,7 +278,8 @@ class LikeMatchServiceTest {
         verify(sender).send(chatidCaptor.capture(), textCaptor.capture(), eq("text"), eq((String) null),
                 eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null));
         assertThat(chatidCaptor.getValue()).isEqualTo("me");
-        assertThat(textCaptor.getValue()).contains("Carla", "Diana", "Santa Cruz");
+        assertThat(textCaptor.getValue()).contains("Carla", "Diana", "Santa Cruz", "30 años", "28 años");
+        assertThat(textCaptor.getValue()).doesNotContain("1996-04-20", "1998-06-15");
         List<List<Button>> buttons = buttonsCaptor.getValue();
         assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("Telegram @carla")
                 && "https://t.me/carla".equals(b.getUrl()));
@@ -312,6 +322,8 @@ class LikeMatchServiceTest {
         assertThat(message.getChatid()).isEqualTo("reported");
         assertThat(message.getReason()).isEqualTo(LikeMatchService.REASON_REPORT_FROM_MATCH);
         assertThat(message.getName()).isEqualTo(reported.getName());
+        assertThat(message.getBirthDate()).isEqualTo("2001-03-15");
+        assertThat(message.getAge()).isNull();
         verify(sender).send(eq("reporter"), eq(LikeMatchService.MESSAGE_REPORT_CONFIRMATION));
     }
 
@@ -344,6 +356,7 @@ class LikeMatchServiceTest {
         Profile profile = new Profile();
         profile.setChatid(chatid);
         profile.setName("Test");
+        profile.setBirthDate(LocalDate.of(2001, 3, 15));
         profile.setAge(25);
         profile.setGender("MALE");
         profile.setOrientation("HETERO");

@@ -250,7 +250,7 @@ public class LikeMatchService {
         message.setReason(REASON_REPORT_FROM_MATCH);
         if (reported != null) {
             message.setName(reported.getName());
-            message.setAge(reported.getAge());
+            message.setBirthDate(reported.getBirthDate() != null ? reported.getBirthDate().toString() : null);
             message.setGender(reported.getGender());
             message.setOrientation(reported.getOrientation());
             message.setCountry(reported.getCountry());
