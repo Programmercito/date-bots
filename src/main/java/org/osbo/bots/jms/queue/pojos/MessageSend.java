@@ -14,4 +14,21 @@ public class MessageSend {
     public boolean disableNotification;
     public String callbackQueryId;
     public List<List<Button>> buttons;
+
+    /**
+     * Telegram message ID for editing/deleting existing messages.
+     */
+    public Integer messageId;
+
+    /**
+     * Target profile chat ID for discovery_profile messages.
+     * Used to deactivate the profile when its photo file_id is broken.
+     */
+    public String targetProfileChatid;
+
+    /**
+     * Optional parse mode for the message text/caption. Supported values:
+     * "Markdown", "MarkdownV2", "HTML".
+     */
+    public String parseMode;
 }

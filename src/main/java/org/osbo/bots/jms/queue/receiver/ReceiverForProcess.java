@@ -9,6 +9,12 @@ import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.services.AdminBroadcastService;
+import org.osbo.bots.model.services.ClubDiscoveryService;
+import org.osbo.bots.model.services.ClubModerationService;
+import org.osbo.bots.model.services.ClubProfileEditService;
+import org.osbo.bots.model.services.ClubRegistrationService;
+import org.osbo.bots.model.services.LikeMatchService;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
@@ -21,6 +27,12 @@ public class ReceiverForProcess {
     NqueueForSend sender;
     UserService userService;
     MessageService messageService;
+    ClubRegistrationService clubRegistrationService;
+    ClubModerationService clubModerationService;
+    ClubDiscoveryService clubDiscoveryService;
+    ClubProfileEditService clubProfileEditService;
+    LikeMatchService likeMatchService;
+    AdminBroadcastService adminBroadcastService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -37,11 +49,19 @@ public class ReceiverForProcess {
     @Value("${telegram.admin}")
     private String adminid;
 
-    ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService) {
+    ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
+            ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService,
+            ClubDiscoveryService clubDiscoveryService, ClubProfileEditService clubProfileEditService,
+            LikeMatchService likeMatchService, AdminBroadcastService adminBroadcastService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
-
+        this.clubRegistrationService = clubRegistrationService;
+        this.clubModerationService = clubModerationService;
+        this.clubDiscoveryService = clubDiscoveryService;
+        this.clubProfileEditService = clubProfileEditService;
+        this.likeMatchService = likeMatchService;
+        this.adminBroadcastService = adminBroadcastService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -63,16 +83,62 @@ public class ReceiverForProcess {
                     "Lo sentimos, no puedes usar el bot porque tu cuenta ha sido inactivada por denuncias de otros usuarios. hasta luego");
             return;
         }
+        if ("/start".equals(update.getText())) {
+            showStartMenu(user, update);
+            userService.save(user);
+            return;
+        }
+        if (handleModerationCommand(update)) {
+            userService.save(user);
+            return;
+        }
+        if (adminBroadcastService.handle(update.getChatid(), update.getText())) {
+            sender.send(update.getChatid(), "Mensaje enviado.");
+            userService.save(user);
+            return;
+        }
+        if (clubProfileEditService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
+        if (clubRegistrationService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
+        if (clubDiscoveryService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
+        if ("/mis_matches".equals(update.getText())) {
+            likeMatchService.listMatches(update.getChatid());
+            user.setComando("start");
+            userService.save(user);
+            return;
+        }
+        if (update.getText() != null && update.getText().startsWith("club_match_report_")) {
+            String reportedChatid = update.getText().substring("club_match_report_".length());
+            likeMatchService.reportMatch(update.getChatid(), reportedChatid);
+            user.setComando("start");
+            userService.save(user);
+            return;
+        }
+        if (update.getText() != null && (update.getText().startsWith("matches_page_")
+                || "matches_clear".equals(update.getText()))) {
+            if (likeMatchService.handleMatchListCallback(user, update)) {
+                userService.save(user);
+                return;
+            }
+        }
+        if ("matches_back".equals(update.getText())) {
+            if (update.getMessageId() != null) {
+                sender.deleteMessage(update.getChatid(), update.getMessageId());
+            }
+            showStartMenu(user, update);
+            userService.save(user);
+            return;
+        }
         if ("start".equals(user.getComando())) {
-            if ("/start".equals(update.getText())) {
-                List<List<Button>> buttons = Arrays.asList(
-                        Arrays.asList(new Button("✏️ Publicar", "/publicar"),
-                                new Button("📢 Ver canal", "/ver_canal")));
-                sender.send(update.getChatid(),
-                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
-                        true, buttons);
-                user.setComando("start");
-            } else if ("/publicar".equals(update.getText()) && update.getUser() != null
+            if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("❌ Cancelar", "/cancelar")));
@@ -89,6 +155,10 @@ public class ReceiverForProcess {
                         "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
             } else if ("/ver_canal".equals(update.getText())) {
                 sender.send(user.getChatid(), "Nuestro canal es: https://t.me/amistadbo");
+            } else if ("/pausar_perfil".equals(update.getText())) {
+                sender.send(user.getChatid(), "Pausar perfil estará disponible pronto.");
+            } else if ("/activar_perfil".equals(update.getText())) {
+                sender.send(user.getChatid(), "Activar perfil estará disponible pronto.");
             } else if (update.getText().startsWith("/aprobar_") && adminid.equals(update.getChatid())) {
                 String[] partes = update.getText().split("_");
                 String idc = partes[1] + "_" + partes[2];
@@ -115,12 +185,6 @@ public class ReceiverForProcess {
                         "Tu mensaje ha sido rechazado por los administradores, ten cuidado con lo que solicitas o podrias ser bloqueado, puedes volver a intentarlo mas tarde.",
                         buttons);
                 sender.send(update.getChatid(), "Mensaje rechazado con exito.");
-            } else if (update.getText().startsWith("/bloquear_") && adminid.equals(update.getChatid())) {
-                String[] partes = update.getText().split("_");
-                User us = userService.findById(partes[1]);
-                us.setEstado("bloqueado");
-                userService.save(us);
-                sender.send(update.getChatid(), "Usuario bloqueado con exito.");
             } else {
                 sender.send(user.getChatid(),
                         "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
@@ -173,6 +237,39 @@ public class ReceiverForProcess {
                     "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
         }
         userService.save(user);
+    }
+
+    private boolean handleModerationCommand(MessageUpdate update) {
+        String text = update.getText();
+        if (text == null || !adminid.equals(update.getChatid())) {
+            return false;
+        }
+        if (text.startsWith("/aprobar_perfil_")) {
+            String targetChatid = text.substring("/aprobar_perfil_".length());
+            return clubModerationService.approveProfile(update.getChatid(), targetChatid);
+        }
+        if (text.startsWith("/rechazar_perfil_")) {
+            String targetChatid = text.substring("/rechazar_perfil_".length());
+            return clubModerationService.rejectProfile(update.getChatid(), targetChatid);
+        }
+        if (text.startsWith("/bloquear_")) {
+            String targetChatid = text.substring("/bloquear_".length());
+            return clubModerationService.blockUser(update.getChatid(), targetChatid);
+        }
+        return false;
+    }
+
+    private void showStartMenu(User user, MessageUpdate update) {
+        List<List<Button>> buttons = Arrays.asList(
+                Arrays.asList(new Button("✏️ Publicar", "/publicar"),
+                        new Button("📢 Ver canal", "/ver_canal"),
+                        new Button("🤝 Entrar al club de amistad", "/club")),
+                Arrays.asList(new Button("👥 Ver personas", "/ver_personas"),
+                        new Button("💕 Mis matches", "/mis_matches")));
+        sender.send(update.getChatid(),
+                "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                true, buttons);
+        user.setComando("start");
     }
 
     private boolean validarTiempos() {

@@ -1,11 +1,16 @@
 package org.osbo.bots.jms.queue.receiver;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageSend;
 import org.osbo.bots.model.entity.Message;
+import org.osbo.bots.model.entity.Profile;
+import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.services.MessageService;
+import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.Sleep;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +20,9 @@ import org.springframework.stereotype.Component;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
+import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.EditMessageCaption;
 import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -25,9 +32,15 @@ import com.pengrad.telegrambot.response.SendResponse;
 @Component
 public class ReceiverForSend {
     MessageService messageservice;
+    UserService userService;
+    ProfileRepository profileRepository;
 
-    ReceiverForSend(MessageService messageService) {
+    private TelegramBot telegramBot;
+
+    ReceiverForSend(MessageService messageService, UserService userService, ProfileRepository profileRepository) {
         this.messageservice = messageService;
+        this.userService = userService;
+        this.profileRepository = profileRepository;
     }
 
     @Value("${telegram.token}")
@@ -35,11 +48,22 @@ public class ReceiverForSend {
     @Value("${telegram.channel}")
     private String chatidchannel;
 
+    private TelegramBot getTelegramBot() {
+        if (telegramBot == null) {
+            telegramBot = new TelegramBot(token);
+        }
+        return telegramBot;
+    }
+
+    void setTelegramBotForTest(TelegramBot bot) {
+        this.telegramBot = bot;
+    }
+
     @JmsListener(destination = "queue.send", containerFactory = "myFactory")
     public void sendMessage(MessageSend message) {
         Sleep.sleep1seg();
         System.out.println("llegando a cola de envio");
-        TelegramBot bot = new TelegramBot(token);
+        TelegramBot bot = getTelegramBot();
         String destinatario = message.getChatid();
         if ("channel".equals(message.getTipo())) {
             destinatario = chatidchannel;
@@ -50,10 +74,38 @@ public class ReceiverForSend {
         }
 
         InlineKeyboardMarkup markup = buildMarkup(message.getButtons());
+
+        if ("edit_text".equals(message.getTipo())) {
+            EditMessageText edit = new EditMessageText(message.getChatid(), message.getMessageId(), message.getText());
+            applyParseMode(edit, message.getParseMode());
+            if (markup != null) {
+                edit.replyMarkup(markup);
+            }
+            bot.execute(edit);
+            return;
+        }
+
+        if ("edit_caption".equals(message.getTipo())) {
+            EditMessageCaption edit = new EditMessageCaption(message.getChatid(), message.getMessageId());
+            edit.caption(message.getText());
+            applyParseMode(edit, message.getParseMode());
+            if (markup != null) {
+                edit.replyMarkup(markup);
+            }
+            bot.execute(edit);
+            return;
+        }
+
+        if ("delete".equals(message.getTipo())) {
+            bot.execute(new DeleteMessage(message.getChatid(), message.getMessageId()));
+            return;
+        }
+
         SendResponse response;
         if (message.getMedias() == null) {
             SendMessage sendMessage = new SendMessage(destinatario, message.getText());
             sendMessage.disableNotification(message.isDisableNotification());
+            applyParseMode(sendMessage, message.getParseMode());
             if (markup != null) {
                 sendMessage.replyMarkup(markup);
             }
@@ -62,6 +114,7 @@ public class ReceiverForSend {
             SendPhoto sendphoto = new SendPhoto(destinatario, message.getMedias()[0]);
             sendphoto.caption(message.getText());
             sendphoto.disableNotification(message.isDisableNotification());
+            applyParseMode(sendphoto, message.getParseMode());
             if (markup != null) {
                 sendphoto.replyMarkup(markup);
             }
@@ -127,11 +180,82 @@ public class ReceiverForSend {
                 }
 
                 messageservice.save(msg);
+            } else if ("discovery_profile".equals(message.getTipo())) {
+                int id = response.message().messageId();
+                User user = userService.findById(message.getChatid());
+                if (user != null) {
+                    user.setCurrentProfileMessageId(id);
+                    userService.save(user);
+                }
             }
             System.out.println("Mensaje enviado");
         } else {
             System.out.println("Error al enviar mensaje");
+            if ("discovery_profile".equals(message.getTipo())) {
+                handleBrokenDiscoveryPhoto(message, bot);
+            } else if ("match_notification".equals(message.getTipo())) {
+                sendFallbackTextMessage(message, bot);
+            }
         }
+    }
+
+    private void sendFallbackTextMessage(MessageSend message, TelegramBot bot) {
+        SendMessage fallback = new SendMessage(message.getChatid(), message.getText());
+        if (message.getButtons() != null && !message.getButtons().isEmpty()) {
+            fallback.replyMarkup(buildMarkup(message.getButtons()));
+        }
+        bot.execute(fallback);
+    }
+
+    private void handleBrokenDiscoveryPhoto(MessageSend message, TelegramBot bot) {
+        String targetChatid = message.getTargetProfileChatid();
+        if (targetChatid == null || targetChatid.isBlank()) {
+            return;
+        }
+        Profile profile = profileRepository.findByChatid(targetChatid);
+        if (profile == null) {
+            return;
+        }
+        profile.setStatus("REJECTED");
+        profile.setUpdatedAt(OffsetDateTime.now().toString());
+        profileRepository.save(profile);
+
+        String ownerNotification = "Tu foto de perfil no pudo enviarse. Tu perfil fue desactivado del club. Si querés volver, escribí /club.";
+        bot.execute(new SendMessage(targetChatid, ownerNotification));
+
+        String viewerChatid = message.getChatid();
+        if (viewerChatid != null && !viewerChatid.equals(targetChatid)) {
+            bot.execute(new SendMessage(viewerChatid,
+                    "No se pudo mostrar un perfil. Continuá con /ver_personas."));
+        }
+    }
+
+    private void applyParseMode(SendMessage request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(SendPhoto request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(EditMessageText request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(EditMessageCaption request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
     }
 
     private InlineKeyboardMarkup buildMarkup(List<List<Button>> buttons) {
