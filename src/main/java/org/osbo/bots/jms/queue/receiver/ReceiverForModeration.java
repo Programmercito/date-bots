@@ -1,10 +1,16 @@
 package org.osbo.bots.jms.queue.receiver;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.ModerationMessage;
+import org.osbo.bots.util.AgeCalculator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
@@ -21,10 +27,17 @@ public class ReceiverForModeration {
 
     private final NqueueForSend sender;
     private final String adminChatid;
+    private final Clock clock;
 
+    @Autowired
     ReceiverForModeration(NqueueForSend sender, @Value("${telegram.admin}") String adminChatid) {
+        this(sender, adminChatid, Clock.system(ZoneId.of("America/La_Paz")));
+    }
+
+    ReceiverForModeration(NqueueForSend sender, String adminChatid, Clock clock) {
         this.sender = sender;
         this.adminChatid = adminChatid;
+        this.clock = clock;
     }
 
     @JmsListener(destination = "queue.moderation", containerFactory = "myFactory")
@@ -50,7 +63,7 @@ public class ReceiverForModeration {
         StringBuilder caption = new StringBuilder();
         caption.append("Nuevo perfil para moderar:\n\n");
         appendField(caption, "Nombre", message.getName());
-        appendField(caption, "Edad", message.getAge());
+        appendField(caption, "Edad", computeAge(message));
         appendField(caption, "Género", translateGender(message.getGender()));
         appendField(caption, "Orientación", translateOrientation(message.getOrientation()));
         appendField(caption, "Ciudad", message.getCity());
@@ -65,6 +78,18 @@ public class ReceiverForModeration {
 
     private void appendField(StringBuilder builder, String label, Object value) {
         builder.append(label).append(": ").append(value == null ? "-" : value).append("\n");
+    }
+
+    private Integer computeAge(ModerationMessage message) {
+        if (message.getBirthDate() != null) {
+            try {
+                LocalDate birthDate = LocalDate.parse(message.getBirthDate());
+                return AgeCalculator.calculateAge(birthDate, null, clock);
+            } catch (DateTimeParseException e) {
+                log.warn("Invalid birthDate format in moderation message: {}", message.getBirthDate());
+            }
+        }
+        return message.getAge();
     }
 
     private String translateGender(String gender) {

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -350,7 +351,63 @@ class ClubDiscoveryServiceTest {
         verify(sender).editCaption(eq(VIEWER_CHATID), eq(202),
                 eq("Perfil reportado. Los administradores lo revisarán."), any(List.class));
         verify(reportRepository).save(any(Report.class));
-        verify(jmsTemplate).convertAndSend(eq("queue.moderation"), any(ModerationMessage.class));
+        ArgumentCaptor<ModerationMessage> moderationCaptor = ArgumentCaptor.forClass(ModerationMessage.class);
+        verify(jmsTemplate).convertAndSend(eq("queue.moderation"), moderationCaptor.capture());
+        assertThat(moderationCaptor.getValue().getBirthDate()).isEqualTo("2001-03-15");
+        assertThat(moderationCaptor.getValue().getAge()).isNull();
+    }
+
+    @Test
+    void shouldShowCalculatedAgeInCaptionWithoutRawBirthdate() {
+        User user = newUser("start");
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        target.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+        target.setBirthDate(LocalDate.of(1998, 5, 10));
+        target.setAge(null);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(Optional.of(activeUser(TARGET_CHATID)));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        ArgumentCaptor<String> captionCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(VIEWER_CHATID), captionCaptor.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(target.getChatid()));
+        assertThat(captionCaptor.getValue()).contains("28 años");
+        assertThat(captionCaptor.getValue()).doesNotContain("10/05/1998", "1998-05-10");
+    }
+
+    @Test
+    void shouldShowLegacyAgeWhenBirthDateMissing() {
+        User user = newUser("start");
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        target.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+        target.setBirthDate(null);
+        target.setAge(30);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(Optional.of(activeUser(TARGET_CHATID)));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        ArgumentCaptor<String> captionCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(VIEWER_CHATID), captionCaptor.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(target.getChatid()));
+        assertThat(captionCaptor.getValue()).contains("30 años");
     }
 
     @Test
@@ -409,6 +466,7 @@ class ClubDiscoveryServiceTest {
         Profile profile = new Profile();
         profile.setChatid(chatid);
         profile.setName("Test");
+        profile.setBirthDate(LocalDate.of(2001, 3, 15));
         profile.setAge(25);
         profile.setGender(ClubDiscoveryService.GENDER_MALE);
         profile.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);

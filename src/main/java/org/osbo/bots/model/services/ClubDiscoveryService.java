@@ -323,7 +323,7 @@ public class ClubDiscoveryService {
         message.setReason(REPORT_REASON_PROFILE);
         if (reportedProfile != null) {
             message.setName(reportedProfile.getName());
-            message.setAge(reportedProfile.getAge());
+            message.setBirthDate(reportedProfile.getBirthDate() != null ? reportedProfile.getBirthDate().toString() : null);
             message.setGender(reportedProfile.getGender());
             message.setOrientation(reportedProfile.getOrientation());
             message.setCountry(reportedProfile.getCountry());

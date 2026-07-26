@@ -22,6 +22,8 @@ public class ModerationMessage {
 
     private Integer age;
 
+    private String birthDate;
+
     private String gender;
 
     private String orientation;

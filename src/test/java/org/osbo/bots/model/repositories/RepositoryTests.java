@@ -2,6 +2,7 @@ package org.osbo.bots.model.repositories;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,6 +53,24 @@ class RepositoryTests {
         assertThat(found.getId()).isEqualTo(saved.getId());
         assertThat(found.getName()).isEqualTo("Test");
         assertThat(found.getWhatsapp()).isEqualTo("+591 70012345");
+    }
+
+    @Test
+    void shouldSaveAndFindProfileWithBirthDate() {
+        String chatid = randomChatid();
+        Profile profile = new Profile();
+        profile.setChatid(chatid);
+        profile.setName("Test");
+        profile.setBirthDate(LocalDate.of(2000, 3, 15));
+        profile.setAge(25);
+        profile.setStatus("PENDING");
+
+        Profile saved = profileRepository.save(profile);
+        Profile found = profileRepository.findByChatid(chatid);
+
+        assertThat(found).isNotNull();
+        assertThat(found.getBirthDate()).isEqualTo(LocalDate.of(2000, 3, 15));
+        assertThat(found.getAge()).isEqualTo(26);
     }
 
     @Test
