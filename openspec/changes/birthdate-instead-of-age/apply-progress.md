@@ -91,9 +91,13 @@ None.
 - Target branch: `dev`
 - One PR contains all changes
 
-## Next Steps
+## Branch and PR
 
-- Create branch `feat/birthdate-instead-of-age` from `dev`
-- Commit changes as reviewable work units
-- Push branch and open PR to `dev`
-- Link PR to approved issue
+- Branch: `feature/birthdate-instead-of-age-pr2` (pushed to origin)
+- PR URL: **BLOCKED** — GitHub CLI is not authenticated (`gh auth login` required or `GH_TOKEN` env var needed)
+- Issue linkage: **BLOCKED** — no approved issue number was provided and GitHub API is unreachable
+
+## Blockers
+
+- `gh pr create` fails because `gh` is not authenticated and no `GH_TOKEN` environment variable is set.
+- The branch-pr workflow requires an approved linked issue; one could not be discovered in the local artifacts.
