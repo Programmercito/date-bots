@@ -102,7 +102,9 @@ public class ReceiverForSend {
         }
 
         SendResponse response;
-        if (message.getMedias() == null) {
+        boolean hasPhoto = message.getMedias() != null && message.getMedias().length > 0
+                && message.getMedias()[0] != null && !message.getMedias()[0].isBlank();
+        if (!hasPhoto) {
             SendMessage sendMessage = new SendMessage(destinatario, message.getText());
             sendMessage.disableNotification(message.isDisableNotification());
             applyParseMode(sendMessage, message.getParseMode());
@@ -193,17 +195,22 @@ public class ReceiverForSend {
             System.out.println("Error al enviar mensaje");
             if ("discovery_profile".equals(message.getTipo())) {
                 handleBrokenDiscoveryPhoto(message, bot);
-            } else if ("match_notification".equals(message.getTipo())) {
-                sendFallbackTextMessage(message, bot);
+            } else {
+                sendFallbackTextMessage(message, bot, destinatario);
             }
         }
     }
 
     private void sendFallbackTextMessage(MessageSend message, TelegramBot bot) {
-        SendMessage fallback = new SendMessage(message.getChatid(), message.getText());
+        sendFallbackTextMessage(message, bot, message.getChatid());
+    }
+
+    private void sendFallbackTextMessage(MessageSend message, TelegramBot bot, String chatid) {
+        SendMessage fallback = new SendMessage(chatid, message.getText());
         if (message.getButtons() != null && !message.getButtons().isEmpty()) {
             fallback.replyMarkup(buildMarkup(message.getButtons()));
         }
+        applyParseMode(fallback, message.getParseMode());
         bot.execute(fallback);
     }
 
