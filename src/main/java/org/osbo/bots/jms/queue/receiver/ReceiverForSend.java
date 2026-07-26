@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.EditMessageCaption;
@@ -76,6 +77,7 @@ public class ReceiverForSend {
 
         if ("edit_text".equals(message.getTipo())) {
             EditMessageText edit = new EditMessageText(message.getChatid(), message.getMessageId(), message.getText());
+            applyParseMode(edit, message.getParseMode());
             if (markup != null) {
                 edit.replyMarkup(markup);
             }
@@ -86,6 +88,7 @@ public class ReceiverForSend {
         if ("edit_caption".equals(message.getTipo())) {
             EditMessageCaption edit = new EditMessageCaption(message.getChatid(), message.getMessageId());
             edit.caption(message.getText());
+            applyParseMode(edit, message.getParseMode());
             if (markup != null) {
                 edit.replyMarkup(markup);
             }
@@ -102,6 +105,7 @@ public class ReceiverForSend {
         if (message.getMedias() == null) {
             SendMessage sendMessage = new SendMessage(destinatario, message.getText());
             sendMessage.disableNotification(message.isDisableNotification());
+            applyParseMode(sendMessage, message.getParseMode());
             if (markup != null) {
                 sendMessage.replyMarkup(markup);
             }
@@ -110,6 +114,7 @@ public class ReceiverForSend {
             SendPhoto sendphoto = new SendPhoto(destinatario, message.getMedias()[0]);
             sendphoto.caption(message.getText());
             sendphoto.disableNotification(message.isDisableNotification());
+            applyParseMode(sendphoto, message.getParseMode());
             if (markup != null) {
                 sendphoto.replyMarkup(markup);
             }
@@ -223,6 +228,34 @@ public class ReceiverForSend {
             bot.execute(new SendMessage(viewerChatid,
                     "No se pudo mostrar un perfil. Continuá con /ver_personas."));
         }
+    }
+
+    private void applyParseMode(SendMessage request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(SendPhoto request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(EditMessageText request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(EditMessageCaption request, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        request.parseMode(ParseMode.valueOf(parseMode));
     }
 
     private InlineKeyboardMarkup buildMarkup(List<List<Button>> buttons) {

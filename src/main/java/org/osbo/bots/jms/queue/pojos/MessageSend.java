@@ -25,4 +25,10 @@ public class MessageSend {
      * Used to deactivate the profile when its photo file_id is broken.
      */
     public String targetProfileChatid;
+
+    /**
+     * Optional parse mode for the message text/caption. Supported values:
+     * "Markdown", "MarkdownV2", "HTML".
+     */
+    public String parseMode;
 }

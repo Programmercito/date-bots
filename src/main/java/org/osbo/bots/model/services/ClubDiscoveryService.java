@@ -20,6 +20,7 @@ import org.osbo.bots.model.repositories.ReportRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.LookingForOption;
+import org.osbo.bots.util.MarkdownEscaper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -144,7 +145,7 @@ public class ClubDiscoveryService {
         String caption = buildProfileCaption(next);
         List<List<Button>> buttons = buildProfileButtons(next);
         sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
-                buttons, next.getChatid());
+                buttons, next.getChatid(), "Markdown");
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
     }
@@ -260,13 +261,13 @@ public class ClubDiscoveryService {
     }
 
     private String buildProfileCaption(Profile profile) {
-        return profile.getName() + ", " + profile.getAge() + " años\n"
+        return "*" + MarkdownEscaper.escape(profile.getName()) + "*, " + profile.getAge() + " años\n"
                 + translateGender(profile.getGender()) + " · " + translateOrientation(profile.getOrientation()) + "\n"
-                + "📍 " + profile.getCity() + "\n\n"
-                + "Sobre: " + profile.getDescription() + "\n"
-                + "Gustos: " + profile.getTastes() + "\n"
-                + "Personalidad: " + profile.getTraits() + "\n"
-                + "Buscando: " + LookingForOption.translate(profile.getLookingFor());
+                + "📍 " + MarkdownEscaper.escape(profile.getCity()) + "\n\n"
+                + "*📝 Sobre:* " + MarkdownEscaper.escape(profile.getDescription()) + "\n"
+                + "*🎸 Gustos:* " + MarkdownEscaper.escape(profile.getTastes()) + "\n"
+                + "*🧠 Personalidad:* " + MarkdownEscaper.escape(profile.getTraits()) + "\n"
+                + "*💘 Buscando:* " + LookingForOption.translate(profile.getLookingFor());
     }
 
     private List<List<Button>> buildProfileButtons(Profile profile) {

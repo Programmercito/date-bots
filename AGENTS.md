@@ -55,7 +55,7 @@ src/main/java/org/osbo/bots/
     services/                    # Business services
   processor/MessageProcessor.java # Receives Telegram webhook updates
   runner/StartupRunner.java      # Registers Telegram update listener
-  util/                          # Helpers (dates, sleep, looking-for options)
+  util/                          # Helpers (dates, sleep, looking-for options, markdown escaping)
 ```
 
 ## 4. User Commands
@@ -252,6 +252,7 @@ This keeps the chat clean and gives clear feedback for every action.
 - Always persist `users.comando` after handling a step.
 - Use `NqueueForSend` for outgoing messages, never call `TelegramBot.execute()` directly from business logic.
 - Use JMS queues for anything that touches Telegram or might be slow.
+- Captions that include user-generated text should be sent with `parseMode="Markdown"` and the user text escaped with `MarkdownEscaper.escape(...)` to avoid broken formatting.
 
 ## 11. Testing
 

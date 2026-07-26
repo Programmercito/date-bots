@@ -17,6 +17,7 @@ import org.osbo.bots.model.repositories.LikeRepository;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.LookingForOption;
+import org.osbo.bots.util.MarkdownEscaper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -149,24 +150,25 @@ public class LikeMatchService {
         String caption = buildMatchCaption(matched);
         List<List<Button>> buttons = buildMatchButtons(matched);
         if (matched.getPhotoFileId() == null || matched.getPhotoFileId().isBlank()) {
-            sender.send(viewer.getChatid(), caption, "text", null, null, false, buttons, null);
+            sender.send(viewer.getChatid(), caption, "text", null, null, false, buttons, null, "Markdown");
         } else {
             sender.send(viewer.getChatid(), caption, SEND_TYPE_MATCH_NOTIFICATION, matched.getPhotoFileId(), null, false,
-                    buttons, null);
+                    buttons, null, "Markdown");
         }
     }
 
     private String buildMatchCaption(Profile profile) {
         StringBuilder caption = new StringBuilder();
-        caption.append("¡Es un match! ❤️\n\n");
-        caption.append(profile.getName()).append(", ").append(profile.getAge()).append(" años\n");
+        caption.append("🎉 *¡Es un match!* ❤️\n\n");
+        caption.append("*").append(MarkdownEscaper.escape(profile.getName())).append("*, ")
+                .append(profile.getAge()).append(" años\n");
         caption.append(translateGender(profile.getGender())).append(" · ")
                 .append(translateOrientation(profile.getOrientation())).append("\n");
-        caption.append("📍 ").append(profile.getCity()).append("\n\n");
-        caption.append("Sobre: ").append(profile.getDescription()).append("\n");
-        caption.append("Gustos: ").append(profile.getTastes()).append("\n");
-        caption.append("Personalidad: ").append(profile.getTraits()).append("\n");
-        caption.append("Buscando: ").append(LookingForOption.translate(profile.getLookingFor()));
+        caption.append("📍 ").append(MarkdownEscaper.escape(profile.getCity())).append("\n\n");
+        caption.append("*📝 Sobre:* ").append(MarkdownEscaper.escape(profile.getDescription())).append("\n");
+        caption.append("*🎸 Gustos:* ").append(MarkdownEscaper.escape(profile.getTastes())).append("\n");
+        caption.append("*🧠 Personalidad:* ").append(MarkdownEscaper.escape(profile.getTraits())).append("\n");
+        caption.append("*💘 Buscando:* ").append(LookingForOption.translate(profile.getLookingFor()));
         return caption.toString();
     }
 

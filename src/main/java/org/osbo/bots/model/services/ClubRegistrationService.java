@@ -17,6 +17,7 @@ import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
 import org.osbo.bots.util.AgeCalculator;
 import org.osbo.bots.util.LookingForOption;
+import org.osbo.bots.util.MarkdownEscaper;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -158,7 +159,7 @@ public class ClubRegistrationService {
                 "Para unirte al club de amistad, completá tu perfil. Primero, ¿cómo querés que te llamemos?");
     }
 
-    private void sendApprovedStatus(String chatid, Profile profile) {
+    public void sendApprovedStatus(String chatid, Profile profile) {
         List<List<Button>> buttons = Arrays.asList(
                 Arrays.asList(new Button("Ver personas", "/ver_personas"),
                         new Button("Editar perfil", "/editar_perfil")),
@@ -542,9 +543,9 @@ public class ClubRegistrationService {
     private void sendPreview(String chatid, Profile profile) {
         String preview = buildProfilePreview(profile);
         List<List<Button>> buttons = Arrays.asList(
-                Arrays.asList(new Button("Confirmar", CALLBACK_PREVIEW_OK),
-                        new Button("Editar", CALLBACK_PREVIEW_EDIT)));
-        sender.send(chatid, preview, true, buttons);
+                Arrays.asList(new Button("✅ Confirmar", CALLBACK_PREVIEW_OK),
+                        new Button("✏️ Editar", CALLBACK_PREVIEW_EDIT)));
+        sender.sendMarkdown(chatid, preview, true, buttons);
     }
 
     private void handlePreview(User user, MessageUpdate update) {
@@ -655,21 +656,21 @@ public class ClubRegistrationService {
 
     private String buildProfilePreview(Profile profile) {
         StringBuilder preview = new StringBuilder();
-        preview.append("Así se verá tu perfil:\n\n");
-        preview.append("Nombre: ").append(profile.getName()).append("\n");
-        preview.append("Edad: ").append(profile.getAge()).append("\n");
-        preview.append("Género: ").append(translateGender(profile.getGender())).append("\n");
-        preview.append("Orientación: ").append(translateOrientation(profile.getOrientation())).append("\n");
-        preview.append("Ciudad: ").append(profile.getCity()).append("\n");
-        preview.append("Sobre vos: ").append(profile.getDescription()).append("\n");
-        preview.append("Gustos: ").append(profile.getTastes()).append("\n");
-        preview.append("Personalidad: ").append(profile.getTraits()).append("\n");
-        preview.append("Buscás: ").append(LookingForOption.translate(profile.getLookingFor())).append("\n");
+        preview.append("👁 *Así se verá tu perfil:*\n\n");
+        preview.append("*👤 Nombre:* ").append(MarkdownEscaper.escape(profile.getName())).append("\n");
+        preview.append("*🎂 Edad:* ").append(profile.getAge()).append(" años\n");
+        preview.append("*⚧ Género:* ").append(translateGender(profile.getGender())).append("\n");
+        preview.append("*💕 Orientación:* ").append(translateOrientation(profile.getOrientation())).append("\n");
+        preview.append("*📍 Ciudad:* ").append(MarkdownEscaper.escape(profile.getCity())).append("\n");
+        preview.append("*📝 Sobre vos:* ").append(MarkdownEscaper.escape(profile.getDescription())).append("\n");
+        preview.append("*🎸 Gustos:* ").append(MarkdownEscaper.escape(profile.getTastes())).append("\n");
+        preview.append("*🧠 Personalidad:* ").append(MarkdownEscaper.escape(profile.getTraits())).append("\n");
+        preview.append("*💘 Buscás:* ").append(LookingForOption.translate(profile.getLookingFor())).append("\n");
         if (profile.getContactUsername() != null && !profile.getContactUsername().isBlank()) {
-            preview.append("Telegram: @").append(profile.getContactUsername()).append("\n");
+            preview.append("*✈️ Telegram:* @").append(MarkdownEscaper.escape(profile.getContactUsername())).append("\n");
         }
         if (profile.getWhatsapp() != null && !profile.getWhatsapp().isBlank()) {
-            preview.append("WhatsApp: ").append(profile.getWhatsapp()).append("\n");
+            preview.append("*📱 WhatsApp:* ").append(MarkdownEscaper.escape(profile.getWhatsapp())).append("\n");
         }
         preview.append("\n¿Confirmás que querés enviarlo a revisión?");
         return preview.toString();

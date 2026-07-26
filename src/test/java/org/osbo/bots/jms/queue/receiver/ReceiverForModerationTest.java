@@ -58,21 +58,21 @@ class ReceiverForModerationTest {
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
         verify(sender).send(eq(ADMIN_CHATID), textCaptor.capture(), eq("text"), photoCaptor.capture(),
-                eq((String) null), eq(false), buttonsCaptor.capture());
+                eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null), eq("Markdown"));
 
         String text = textCaptor.getValue();
-        assertThat(text).contains("Nuevo perfil para moderar");
-        assertThat(text).contains("Nombre: Maria");
-        assertThat(text).contains("Edad: 27");
+        assertThat(text).contains("*Nuevo perfil para moderar*");
+        assertThat(text).contains("*👤 Nombre:* Maria");
+        assertThat(text).contains("*🎂 Edad:* 27");
         assertThat(text).doesNotContain("1998-09-12");
-        assertThat(text).contains("Género: Mujer");
-        assertThat(text).contains("Orientación: Hetero");
-        assertThat(text).contains("Ciudad: La Paz");
-        assertThat(text).contains("Sobre: Friendly");
-        assertThat(text).contains("Gustos: Music, hiking");
-        assertThat(text).contains("Personalidad: Honest, funny");
-        assertThat(text).contains("Buscando: Friends");
-        assertThat(text).contains("Contacto: @maria_user");
+        assertThat(text).contains("*⚧ Género:* Mujer");
+        assertThat(text).contains("*💕 Orientación:* Hetero");
+        assertThat(text).contains("*📍 Ciudad:* La Paz");
+        assertThat(text).contains("*📝 Sobre:* Friendly");
+        assertThat(text).contains("*🎸 Gustos:* Music, hiking");
+        assertThat(text).contains("*🧠 Personalidad:* Honest, funny");
+        assertThat(text).contains("*💘 Buscando:* Friends");
+        assertThat(text).contains("*📞 Contacto:* @maria\\_user");
         assertThat(photoCaptor.getValue()).isEqualTo("photo-id-123");
 
         List<List<Button>> buttons = buttonsCaptor.getValue();
@@ -104,8 +104,8 @@ class ReceiverForModerationTest {
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
         verify(sender).send(eq(ADMIN_CHATID), textCaptor.capture(), eq("text"), photoCaptor.capture(),
-                eq((String) null), eq(false), buttonsCaptor.capture());
-        assertThat(textCaptor.getValue()).contains("Edad: 28");
+                eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null), eq("Markdown"));
+        assertThat(textCaptor.getValue()).contains("*🎂 Edad:* 28");
         assertThat(photoCaptor.getValue()).isEqualTo("photo-id-456");
     }
 
@@ -129,8 +129,8 @@ class ReceiverForModerationTest {
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
         verify(sender).send(eq(ADMIN_CHATID), textCaptor.capture(), eq("text"), photoCaptor.capture(),
-                eq((String) null), eq(false), buttonsCaptor.capture());
-        assertThat(textCaptor.getValue()).contains("Edad: 30");
+                eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null), eq("Markdown"));
+        assertThat(textCaptor.getValue()).contains("*🎂 Edad:* 30");
         assertThat(photoCaptor.getValue()).isEqualTo("photo-id-789");
     }
 

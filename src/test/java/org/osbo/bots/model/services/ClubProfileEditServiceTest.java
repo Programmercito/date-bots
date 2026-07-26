@@ -32,6 +32,7 @@ class ClubProfileEditServiceTest {
     private NqueueForSend sender;
     private ProfileRepository profileRepository;
     private UserRepository userRepository;
+    private ClubRegistrationService clubRegistrationService;
     private ClubProfileEditService service;
 
     @BeforeEach
@@ -39,7 +40,8 @@ class ClubProfileEditServiceTest {
         sender = mock(NqueueForSend.class);
         profileRepository = mock(ProfileRepository.class);
         userRepository = mock(UserRepository.class);
-        service = new ClubProfileEditService(sender, profileRepository, userRepository);
+        clubRegistrationService = mock(ClubRegistrationService.class);
+        service = new ClubProfileEditService(sender, profileRepository, userRepository, clubRegistrationService);
     }
 
     @Test
@@ -81,7 +83,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(handled).isTrue();
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
-        verify(sender).send(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -96,7 +98,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getName()).isEqualTo("Nuevo nombre");
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
-        verify(sender).send(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -111,7 +113,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getBirthDate()).isEqualTo(LocalDate.of(1998, 5, 10));
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
-        verify(sender).send(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -125,7 +127,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getBirthDate()).isNull();
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_BIRTHDATE);
-        verify(sender).send(eq(CHATID), anyString());
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
         verify(profileRepository, never()).save(any(Profile.class));
     }
 
@@ -141,6 +143,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getCity()).isEqualTo("Cochabamba");
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -158,6 +161,7 @@ class ClubProfileEditServiceTest {
         assertThat(profile.getGender()).isEqualTo(ClubRegistrationService.GENDER_FEMALE);
         assertThat(profile.getStatus()).isEqualTo(ClubProfileEditService.STATUS_APPROVED);
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -175,6 +179,7 @@ class ClubProfileEditServiceTest {
         assertThat(profile.getGender()).isEqualTo(ClubRegistrationService.GENDER_MALE);
         assertThat(profile.getStatus()).isEqualTo(ClubProfileEditService.STATUS_REJECTED);
         assertThat(user.getComando()).isEqualTo("start");
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
     }
 
     @Test
@@ -189,6 +194,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getLookingFor()).isEqualTo(LookingForOption.LOOKING_FOR_CASUAL);
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -201,7 +207,7 @@ class ClubProfileEditServiceTest {
         service.handle(user, update);
 
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_LOOKING_FOR);
-        verify(sender).send(eq(CHATID), eq("¿Qué estás buscando?"), eq(true), any(List.class));
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
     }
 
     @Test
@@ -217,6 +223,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getPhotoFileId()).isEqualTo("new-photo-id");
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("new-photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -233,6 +240,7 @@ class ClubProfileEditServiceTest {
         assertThat(profile.getContactUsername()).isEqualTo(USERNAME);
         assertThat(profile.getWhatsapp()).isEqualTo("+591 70012345");
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -248,6 +256,7 @@ class ClubProfileEditServiceTest {
         assertThat(profile.getWhatsapp()).isEqualTo("+591 700-98765");
         assertThat(profile.getContactUsername()).isEqualTo(USERNAME);
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     @Test
@@ -261,7 +270,7 @@ class ClubProfileEditServiceTest {
 
         assertThat(profile.getWhatsapp()).isNull();
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_CONTACT);
-        verify(sender).send(eq(CHATID), anyString());
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
         verify(profileRepository, never()).save(any(Profile.class));
     }
 
@@ -275,7 +284,7 @@ class ClubProfileEditServiceTest {
         service.handle(user, update);
 
         assertThat(user.getComando()).isEqualTo("start");
-        verify(sender).send(eq(CHATID), eq("Tu perfil fue actualizado."), eq(true), any(List.class));
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
     }
 
     @Test
@@ -289,17 +298,61 @@ class ClubProfileEditServiceTest {
 
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(sender).send(eq(CHATID), textCaptor.capture(), eq(true), buttonsCaptor.capture());
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), textCaptor.capture(), eq(true), buttonsCaptor.capture(),
+                eq("Markdown"));
 
         String text = textCaptor.getValue();
-        assertThat(text).contains("Nombre: Test");
-        assertThat(text).contains("Ciudad: Santa Cruz");
-        assertThat(text).contains("Buscás: Amistad");
+        assertThat(text).contains("*👤 Nombre:*");
+        assertThat(text).contains("*📍 Ciudad:*");
+        assertThat(text).contains("*💘 Buscás:* Amistad");
 
         List<List<Button>> buttons = buttonsCaptor.getValue();
         List<String> labels = buttons.stream().flatMap(List::stream).map(Button::getText).toList();
-        assertThat(labels).contains("Nombre", "Fecha de nacimiento", "Género", "Orientación", "Ciudad",
-                "Descripción", "Gustos", "Personalidad", "Buscando", "Foto", "Contacto", "Terminar");
+        assertThat(labels).contains("👤 Nombre", "🎂 Fecha de nacimiento", "⚧ Género", "💕 Orientación", "📍 Ciudad",
+                "📝 Descripción", "🎸 Gustos", "🧠 Personalidad", "💘 Buscando", "📷 Foto", "📞 Contacto",
+                "✅ Terminar", "⬅️ Volver al menú del club", "🏠 Volver al inicio");
+    }
+
+    @Test
+    void shouldCancelEditWithClubCommand() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_NAME);
+        MessageUpdate update = newUpdate("/club", USERNAME);
+        Profile profile = approvedProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        boolean handled = service.handle(user, update);
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo("start");
+        verify(clubRegistrationService).sendApprovedStatus(CHATID, profile);
+    }
+
+    @Test
+    void shouldCancelEditWithStartCommand() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_NAME);
+        MessageUpdate update = newUpdate("/start", USERNAME);
+        Profile profile = approvedProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        boolean handled = service.handle(user, update);
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo("start");
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(clubRegistrationService, never()).sendApprovedStatus(anyString(), any(Profile.class));
+    }
+
+    @Test
+    void shouldReturnToMenuWhenCancelButtonPressed() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_NAME);
+        MessageUpdate update = newUpdate(ClubProfileEditService.CALLBACK_EDIT_CANCEL, USERNAME);
+        Profile profile = approvedProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, update);
+
+        assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }
 
     private User newUser(String comando) {

@@ -69,6 +69,11 @@ public class NqueueForSend {
 
     public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
             boolean disableNotification, List<List<Button>> buttons, String targetProfileChatid) {
+        this.send(chatid, text, tipo, photo, msgid, disableNotification, buttons, targetProfileChatid, null);
+    }
+
+    public void send(@NonNull String chatid, @NonNull String text, String tipo, String photo, String msgid,
+            boolean disableNotification, List<List<Button>> buttons, String targetProfileChatid, String parseMode) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setText(text);
@@ -77,11 +82,26 @@ public class NqueueForSend {
         message.setDisableNotification(disableNotification);
         message.setButtons(buttons);
         message.setTargetProfileChatid(targetProfileChatid);
+        message.setParseMode(parseMode);
         if (photo != null) {
             message.setMedias(new String[1]);
             message.getMedias()[0] = photo;
         }
         jmsTemplate.convertAndSend("queue.send", message);
+    }
+
+    public void sendMarkdown(@NonNull String chatid, @NonNull String text, List<List<Button>> buttons) {
+        this.send(chatid, text, "text", null, null, false, buttons, null, "Markdown");
+    }
+
+    public void sendMarkdown(@NonNull String chatid, @NonNull String text, boolean disableNotification,
+            List<List<Button>> buttons) {
+        this.send(chatid, text, "text", null, null, disableNotification, buttons, null, "Markdown");
+    }
+
+    public void sendPhoto(@NonNull String chatid, @NonNull String photo, @NonNull String caption,
+            boolean disableNotification, List<List<Button>> buttons, String parseMode) {
+        this.send(chatid, caption, "text", photo, null, disableNotification, buttons, null, parseMode);
     }
 
     public void answerCallbackQuery(@NonNull String callbackQueryId) {
@@ -97,12 +117,23 @@ public class NqueueForSend {
 
     public void editMessage(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
             List<List<Button>> buttons) {
+        this.editMessage(chatid, messageId, text, buttons, null);
+    }
+
+    public void editMessageMarkdown(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons) {
+        this.editMessage(chatid, messageId, text, buttons, "Markdown");
+    }
+
+    private void editMessage(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons, String parseMode) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setTipo("edit_text");
         message.setMessageId(messageId);
         message.setText(text);
         message.setButtons(buttons);
+        message.setParseMode(parseMode);
         jmsTemplate.convertAndSend("queue.send", message);
     }
 
@@ -112,12 +143,23 @@ public class NqueueForSend {
 
     public void editCaption(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
             List<List<Button>> buttons) {
+        this.editCaption(chatid, messageId, text, buttons, null);
+    }
+
+    public void editCaptionMarkdown(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons) {
+        this.editCaption(chatid, messageId, text, buttons, "Markdown");
+    }
+
+    private void editCaption(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
+            List<List<Button>> buttons, String parseMode) {
         MessageSend message = new MessageSend();
         message.setChatid(chatid);
         message.setTipo("edit_caption");
         message.setMessageId(messageId);
         message.setText(text);
         message.setButtons(buttons);
+        message.setParseMode(parseMode);
         jmsTemplate.convertAndSend("queue.send", message);
     }
 

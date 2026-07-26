@@ -206,11 +206,12 @@ class LikeMatchServiceTest {
         ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
         verify(sender, times(2)).send(chatidCaptor.capture(), textCaptor.capture(), eq("match_notification"),
-                photoCaptor.capture(), eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null));
+                photoCaptor.capture(), eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null),
+                eq("Markdown"));
         assertThat(chatidCaptor.getAllValues()).containsExactly("A", "B");
         assertThat(photoCaptor.getAllValues()).containsExactly("photo-B", "photo-A");
         String textForA = textCaptor.getAllValues().get(0);
-        assertThat(textForA).contains("Bruno, 25 años");
+        assertThat(textForA).contains("*Bruno*, 25 años");
         assertThat(textForA).doesNotContain("2001-03-15");
         List<List<Button>> buttonsForA = buttonsCaptor.getAllValues().get(0);
         assertThat(flattenButtons(buttonsForA)).anyMatch(b -> b.getText().contains("Telegram @bruno")
@@ -233,9 +234,9 @@ class LikeMatchServiceTest {
         service.notifyMatch(new MatchMessage("A", "B"));
 
         verify(sender, times(1)).send(eq("A"), anyString(), eq("match_notification"), eq("photo-B"),
-                eq((String) null), eq(false), any(List.class), eq((String) null));
+                eq((String) null), eq(false), any(List.class), eq((String) null), eq("Markdown"));
         verify(sender, times(1)).send(eq("B"), anyString(), eq("text"), eq((String) null),
-                eq((String) null), eq(false), any(List.class), eq((String) null));
+                eq((String) null), eq(false), any(List.class), eq((String) null), eq("Markdown"));
     }
 
     @Test
@@ -245,7 +246,7 @@ class LikeMatchServiceTest {
 
         service.notifyMatch(new MatchMessage("A", "B"));
 
-        verify(sender, never()).send(anyString(), anyString(), anyString(), any(), any(), anyBoolean(), any(), any());
+        verify(sender, never()).send(anyString(), anyString(), anyString(), any(), any(), anyBoolean(), any(), any(), any());
     }
 
     @Test
