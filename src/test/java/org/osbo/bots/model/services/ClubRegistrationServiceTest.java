@@ -8,9 +8,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -93,10 +90,11 @@ class ClubRegistrationServiceTest {
         when(userPlanRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.handle(user, nameUpdate);
-        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_AGE);
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
 
-        service.handle(user, newUpdate("25", USERNAME));
+        service.handle(user, newUpdate("15/03/2000", USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_GENDER);
+        assertThat(profile.getBirthDate()).isEqualTo(java.time.LocalDate.of(2000, 3, 15));
 
         service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_GENDER_MALE, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_ORIENTATION);
@@ -136,7 +134,9 @@ class ClubRegistrationServiceTest {
         assertThat(user.getComando()).isEqualTo("start");
         assertThat(profile.getStatus()).isEqualTo(ClubRegistrationService.STATUS_PENDING);
 
-        verify(jmsTemplate).convertAndSend(eq("queue.moderation"), any(ModerationMessage.class));
+        ArgumentCaptor<ModerationMessage> moderationCaptor = ArgumentCaptor.forClass(ModerationMessage.class);
+        verify(jmsTemplate).convertAndSend(eq("queue.moderation"), moderationCaptor.capture());
+        assertThat(moderationCaptor.getValue().getBirthDate()).isEqualTo("2000-03-15");
 
         ArgumentCaptor<UserPlan> planCaptor = ArgumentCaptor.forClass(UserPlan.class);
         verify(userPlanRepository).save(planCaptor.capture());
@@ -144,15 +144,43 @@ class ClubRegistrationServiceTest {
     }
 
     @Test
-    void shouldRejectAgeBelowMinimum() {
-        User user = newUser(ClubRegistrationService.STATE_REGISTER_AGE);
+    void shouldRejectBirthdateBelowMinimumAge() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
         Profile profile = newIncompleteProfile();
         when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
 
-        service.handle(user, newUpdate("17", USERNAME));
+        service.handle(user, newUpdate("15/03/2010", USERNAME));
 
-        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_AGE);
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
         verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectInvalidBirthdateFormatAndShowExample() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
+        Profile profile = newIncompleteProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, newUpdate("15-03-2000", USERNAME));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
+        verify(profileRepository, never()).save(any());
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(CHATID), messageCaptor.capture());
+        assertThat(messageCaptor.getValue()).contains("DD/MM/AAAA", "15/03/2000");
+    }
+
+    @Test
+    void shouldAcceptBirthdateOn18thBirthday() {
+        User user = newUser(ClubRegistrationService.STATE_REGISTER_BIRTHDATE);
+        Profile profile = newIncompleteProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+        when(profileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, newUpdate("26/07/2008", USERNAME));
+
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_GENDER);
+        assertThat(profile.getBirthDate()).isEqualTo(java.time.LocalDate.of(2008, 7, 26));
     }
 
     @Test
@@ -290,7 +318,7 @@ class ClubRegistrationServiceTest {
     private Profile newCompleteProfile() {
         Profile profile = newIncompleteProfile();
         profile.setName("Test Name");
-        profile.setAge(25);
+        profile.setBirthDate(java.time.LocalDate.of(2000, 3, 15));
         profile.setGender(ClubRegistrationService.GENDER_MALE);
         profile.setOrientation(ClubRegistrationService.ORIENTATION_HETERO);
         profile.setCity("Santa Cruz");

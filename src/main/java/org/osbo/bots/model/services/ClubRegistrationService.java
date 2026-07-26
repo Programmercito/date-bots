@@ -1,6 +1,8 @@
 package org.osbo.bots.model.services;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,6 +15,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.entity.UserPlan;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
+import org.osbo.bots.util.AgeCalculator;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +51,7 @@ public class ClubRegistrationService {
     public static final String CALLBACK_CONTACT_SKIP = "club_contact_skip";
 
     public static final String STATE_REGISTER_NAME = "club_register_name";
-    public static final String STATE_REGISTER_AGE = "club_register_age";
+    public static final String STATE_REGISTER_BIRTHDATE = "club_register_birthdate";
     public static final String STATE_REGISTER_GENDER = "club_register_gender";
     public static final String STATE_REGISTER_ORIENTATION = "club_register_orientation";
     public static final String STATE_REGISTER_CITY = "club_register_city";
@@ -199,7 +202,7 @@ public class ClubRegistrationService {
         String comando = user.getComando();
         switch (comando) {
             case STATE_REGISTER_NAME -> handleName(user, update);
-            case STATE_REGISTER_AGE -> handleAge(user, update);
+            case STATE_REGISTER_BIRTHDATE -> handleBirthdate(user, update);
             case STATE_REGISTER_GENDER -> handleGender(user, update);
             case STATE_REGISTER_ORIENTATION -> handleOrientation(user, update);
             case STATE_REGISTER_CITY -> handleCity(user, update);
@@ -232,30 +235,32 @@ public class ClubRegistrationService {
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
 
-        user.setComando(STATE_REGISTER_AGE);
-        sender.send(update.getChatid(), "¿Cuántos años tenés?");
+        user.setComando(STATE_REGISTER_BIRTHDATE);
+        sender.send(update.getChatid(), "¿Cuál es tu fecha de nacimiento? Escribila en formato DD/MM/AAAA, por ejemplo: 15/03/2000.");
     }
 
     private void askForName(String chatid) {
         sender.send(chatid, "Por favor, escribí tu nombre o apodo para el perfil.");
     }
 
-    private void handleAge(User user, MessageUpdate update) {
+    private void handleBirthdate(User user, MessageUpdate update) {
         if (isEmptyText(update)) {
-            sender.send(update.getChatid(), "Por favor, escribí tu edad en números.");
+            sender.send(update.getChatid(),
+                    "Por favor, escribí tu fecha de nacimiento en formato DD/MM/AAAA, por ejemplo: 15/03/2000.");
             return;
         }
-        int age;
+        LocalDate birthDate;
         try {
-            age = Integer.parseInt(update.getText().trim());
-        } catch (NumberFormatException e) {
+            birthDate = AgeCalculator.parseUserDate(update.getText().trim());
+        } catch (DateTimeParseException e) {
             sender.send(update.getChatid(),
-                    "No entendí la edad. Escribí un número, por ejemplo: 25.");
+                    "No entendí la fecha. Usá el formato DD/MM/AAAA, por ejemplo: 15/03/2000.");
             return;
         }
-        if (age < MINIMUM_AGE) {
+        Integer age = AgeCalculator.calculateAge(birthDate, null);
+        if (age == null || age < MINIMUM_AGE) {
             sender.send(update.getChatid(),
-                    "Debés ser mayor de 18 años para unirte al club. Por favor, ingresá una edad válida.");
+                    "Debés ser mayor de 18 años para unirte al club. Por favor, ingresá una fecha válida.");
             return;
         }
         Profile profile = requireIncompleteProfile(update.getChatid());
@@ -263,7 +268,7 @@ public class ClubRegistrationService {
             restart(user, update.getChatid());
             return;
         }
-        profile.setAge(age);
+        profile.setBirthDate(birthDate);
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
 
@@ -608,7 +613,7 @@ public class ClubRegistrationService {
         message.setType("NEW_PROFILE");
         message.setChatid(profile.getChatid());
         message.setName(profile.getName());
-        message.setAge(profile.getAge());
+        message.setBirthDate(profile.getBirthDate() != null ? profile.getBirthDate().toString() : null);
         message.setGender(profile.getGender());
         message.setOrientation(profile.getOrientation());
         message.setCountry(profile.getCountry());
