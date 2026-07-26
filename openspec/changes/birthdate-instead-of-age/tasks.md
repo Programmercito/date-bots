@@ -33,25 +33,25 @@ Chain strategy: pending
 
 ## Phase 2: Core Implementation
 
-- [ ] 2.1 Replace `STATE_REGISTER_AGE` and `handleAge` in `src/main/java/org/osbo/bots/model/services/ClubRegistrationService.java` with `STATE_REGISTER_BIRTHDATE` and `handleBirthdate`, parse `DD/MM/AAAA`, reject under 18, and store `birthDate`.
-- [ ] 2.2 Update `src/main/java/org/osbo/bots/jms/queue/pojos/ModerationMessage.java` to add `String birthDate` while keeping `Integer age` as a legacy fallback.
-- [ ] 2.3 Update `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForModeration.java` to compute age from `birthDate` for the admin caption, falling back to `age`.
+- [x] 2.1 Replace `STATE_REGISTER_AGE` and `handleAge` in `src/main/java/org/osbo/bots/model/services/ClubRegistrationService.java` with `STATE_REGISTER_BIRTHDATE` and `handleBirthdate`, parse `DD/MM/AAAA`, reject under 18, and store `birthDate`.
+- [x] 2.2 Update `src/main/java/org/osbo/bots/jms/queue/pojos/ModerationMessage.java` to add `String birthDate` while keeping `Integer age` as a legacy fallback.
+- [x] 2.3 Update `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForModeration.java` to compute age from `birthDate` for the admin caption, falling back to `age`.
 
 ## Phase 3: Integration
 
-- [ ] 3.1 Update `src/main/java/org/osbo/bots/model/services/ClubDiscoveryService.java` to use `Profile.getAge()` in profile captions and set `birthDate` in report messages.
-- [ ] 3.2 Update `src/main/java/org/osbo/bots/model/services/LikeMatchService.java` to use `Profile.getAge()` in match and `/mis_matches` captions and set `birthDate` in report messages.
-- [ ] 3.3 Update `AGENTS.md` to replace the `club_register_age` state with `club_register_birthdate`.
+- [x] 3.1 Update `src/main/java/org/osbo/bots/model/services/ClubDiscoveryService.java` to use `Profile.getAge()` in profile captions and set `birthDate` in report messages.
+- [x] 3.2 Update `src/main/java/org/osbo/bots/model/services/LikeMatchService.java` to use `Profile.getAge()` in match and `/mis_matches` captions and set `birthDate` in report messages.
+- [x] 3.3 Update `AGENTS.md` to replace the `club_register_age` state with `club_register_birthdate`.
 
 ## Phase 4: Testing
 
-- [ ] 4.1 Update `src/test/java/org/osbo/bots/model/services/ClubRegistrationServiceTest.java` with birthdate parsing, under-18 rejection, invalid format retry, and state transition tests.
-- [ ] 4.2 Update `src/test/java/org/osbo/bots/model/services/ClubDiscoveryServiceTest.java` to assert captions show calculated age and never contain raw birthdate.
-- [ ] 4.3 Update `src/test/java/org/osbo/bots/model/services/LikeMatchServiceTest.java` to assert match and `/mis_matches` captions show calculated age.
-- [ ] 4.4 Update `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForModerationTest.java` to verify admin caption shows age, not raw birthdate.
-- [ ] 4.5 Update `src/test/java/org/osbo/bots/model/repositories/RepositoryTests.java` to assert `birthDate` round-trips through JPA.
+- [x] 4.1 Update `src/test/java/org/osbo/bots/model/services/ClubRegistrationServiceTest.java` with birthdate parsing, under-18 rejection, invalid format retry, and state transition tests.
+- [x] 4.2 Update `src/test/java/org/osbo/bots/model/services/ClubDiscoveryServiceTest.java` to assert captions show calculated age and never contain raw birthdate.
+- [x] 4.3 Update `src/test/java/org/osbo/bots/model/services/LikeMatchServiceTest.java` to assert match and `/mis_matches` captions show calculated age.
+- [x] 4.4 Update `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForModerationTest.java` to verify admin caption shows age, not raw birthdate.
+- [x] 4.5 Update `src/test/java/org/osbo/bots/model/repositories/RepositoryTests.java` to assert `birthDate` round-trips through JPA.
 
 ## Phase 5: Cleanup
 
-- [ ] 5.1 Remove any remaining references to `club_register_age` in registration service and tests.
-- [ ] 5.2 Run `.\mvnw test` on Windows and fix regressions.
+- [x] 5.1 Remove any remaining references to `club_register_age` in registration service and tests.
+- [x] 5.2 Run `.\mvnw test` on Windows and fix regressions.

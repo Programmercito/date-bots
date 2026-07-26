@@ -98,7 +98,7 @@ The bot stores the current state in `users.comando`. Always set and persist this
 ### Club registration states
 
 - `club_register_name`
-- `club_register_age`
+- `club_register_birthdate`
 - `club_register_gender`
 - `club_register_orientation`
 - `club_register_city`
@@ -136,9 +136,9 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 ### 8.1 Registration
 
 1. User taps **Entrar al club de amistad** (`/club`).
-2. Bot asks for: name, age, gender, orientation, city, description, tastes, traits, looking for (predefined buttons), photo.
+2. Bot asks for: name, birthdate (DD/MM/AAAA), gender, orientation, city, description, tastes, traits, looking for (predefined buttons), photo.
 3. Validates:
-   - Age >= 18.
+   - Age >= 18 (calculated from birthdate).
    - Telegram username is set.
    - Allowed combinations only: **male hetero**, **female hetero**, **female bi**.
 4. Profile is saved with status `PENDING`.
