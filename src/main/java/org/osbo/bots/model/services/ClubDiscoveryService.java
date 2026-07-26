@@ -230,10 +230,20 @@ public class ClubDiscoveryService {
         return approved.stream()
                 .filter(p -> !p.getChatid().equals(currentChatid))
                 .filter(p -> matchesFilters(currentProfile, p))
+                .filter(p -> matchesCity(currentProfile, p))
                 .filter(p -> !alreadyLiked.contains(p.getChatid()))
                 .filter(p -> isActiveUser(p.getChatid()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private boolean matchesCity(Profile viewer, Profile target) {
+        String viewerCity = viewer.getCity();
+        String targetCity = target.getCity();
+        if (viewerCity == null || viewerCity.isBlank() || targetCity == null || targetCity.isBlank()) {
+            return true;
+        }
+        return viewerCity.trim().equalsIgnoreCase(targetCity.trim());
     }
 
     private boolean matchesFilters(Profile viewer, Profile target) {

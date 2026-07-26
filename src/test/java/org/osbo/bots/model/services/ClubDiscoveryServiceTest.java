@@ -152,6 +152,38 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
+    void shouldOnlyShowProfilesFromTheViewerCity() {
+        User user = newUser("start");
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        viewer.setCity("La Paz");
+
+        Profile sameCityProfile = approvedProfile(TARGET_CHATID);
+        sameCityProfile.setCity("La Paz");
+        sameCityProfile.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        sameCityProfile.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+
+        Profile otherCityProfile = approvedProfile("other-city");
+        otherCityProfile.setCity("Santa Cruz");
+        otherCityProfile.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        otherCityProfile.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(sameCityProfile, otherCityProfile));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.findById(anyString())).thenReturn(Optional.of(activeUser("any")));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        ArgumentCaptor<String> photoCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), photoCaptor.capture(),
+                eq((String) null), eq(false), any(List.class), eq(sameCityProfile.getChatid()), eq("Markdown"));
+        assertThat(photoCaptor.getValue()).isEqualTo(sameCityProfile.getPhotoFileId());
+    }
+
+    @Test
     void femaleHeteroShouldSeeOnlyMaleHetero() {
         User user = newUser("start");
         MessageUpdate update = newUpdate("/ver_personas", null);
