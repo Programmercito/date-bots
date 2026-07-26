@@ -8,6 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +25,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.entity.UserPlan;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
+import org.osbo.bots.util.AgeCalculator;
 import org.springframework.jms.core.JmsTemplate;
 
 class ClubRegistrationServiceTest {
