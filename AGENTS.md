@@ -74,7 +74,7 @@ src/main/java/org/osbo/bots/
 | `/editar_perfil` | "Editar perfil" | Approved profiles | Edit approved profile fields |
 | `/pausar_perfil` | "Pausar perfil" | Approved profiles | Hide from discovery (placeholder) |
 | `/activar_perfil` | "Activar perfil" | Paused profiles | Show in discovery (placeholder) |
-| `/mis_matches` | "Mis matches" | All | List current matches (placeholder) |
+| `/mis_matches` | "Mis matches" | Approved profiles | List mutual matches (paginated, 3 per page) with clear option |
 
 ### Admin commands
 
@@ -85,6 +85,8 @@ src/main/java/org/osbo/bots/
 | `/bloquear_<chatid>` | "⛔ Bloquear" | Block a user |
 | `/aprobar_perfil_<chatid>` | "✅ Aprobar" | Approve a friendship-club profile |
 | `/rechazar_perfil_<chatid>` | "❌ Rechazar" | Reject a friendship-club profile |
+| `/enviar_todos <texto>` | — | Admin only | Broadcast text to every user |
+| `/enviar_canal <texto>` | — | Admin only | Post text to the channel at any time |
 
 ## 5. Bot State Machine
 

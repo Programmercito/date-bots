@@ -288,7 +288,8 @@ class ClubDiscoveryServiceTest {
 
         assertThat(user.getComando()).isEqualTo("start");
         verify(sender).deleteMessage(VIEWER_CHATID, 99);
-        assertThat(user.getPreviousProfileMessageId()).isEqualTo(100);
+        verify(sender).deleteMessage(VIEWER_CHATID, 100);
+        assertThat(user.getPreviousProfileMessageId()).isNull();
         assertThat(user.getCurrentProfileMessageId()).isNull();
         verify(sender).send(eq(VIEWER_CHATID), eq("No hay más personas por ahora."));
     }
@@ -424,7 +425,7 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
-    void shouldDeletePreviousMessageAndShiftCurrentToPreviousWhenShowingNext() {
+    void shouldDeletePreviousAndCurrentMessagesWhenShowingNext() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
         user.setCurrentProfileMessageId(200);
         user.setPreviousProfileMessageId(100);
@@ -444,8 +445,38 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         verify(sender).deleteMessage(VIEWER_CHATID, 100);
-        assertThat(user.getPreviousProfileMessageId()).isEqualTo(200);
+        verify(sender).deleteMessage(VIEWER_CHATID, 200);
+        assertThat(user.getPreviousProfileMessageId()).isNull();
         assertThat(user.getCurrentProfileMessageId()).isNull();
+    }
+
+    @Test
+    void shouldDeleteExistingSwipeMessageWhenRestartingSwipeFromMenu() {
+        // User was swiping (currentProfileMessageId set), went back to menu, now starts swiping again
+        User user = newUser("start");
+        user.setCurrentProfileMessageId(100);
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        target.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(Optional.of(activeUser(TARGET_CHATID)));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        // Old message from the previous swipe session must be deleted
+        verify(sender).deleteMessage(VIEWER_CHATID, 100);
+        assertThat(user.getCurrentProfileMessageId()).isNull();
+        assertThat(user.getComando()).isEqualTo(ClubDiscoveryService.STATE_BROWSING);
+        // And a new profile message must be sent
+        verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), anyString(),
+                eq((String) null), eq(false), any(List.class), eq(target.getChatid()), eq("Markdown"));
     }
 
     private User newUser(String comando) {

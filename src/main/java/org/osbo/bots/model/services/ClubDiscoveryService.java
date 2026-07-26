@@ -130,7 +130,8 @@ public class ClubDiscoveryService {
      */
     public void showNextProfile(User user, MessageUpdate update) {
         deletePreviousProfileMessage(user);
-        user.setPreviousProfileMessageId(user.getCurrentProfileMessageId());
+        deleteCurrentProfileMessage(user);
+        user.setPreviousProfileMessageId(null);
         user.setCurrentProfileMessageId(null);
 
         Profile next = findNextProfile(user.getChatid());
@@ -281,6 +282,12 @@ public class ClubDiscoveryService {
     private void deletePreviousProfileMessage(User user) {
         if (user.getPreviousProfileMessageId() != null) {
             sender.deleteMessage(user.getChatid(), user.getPreviousProfileMessageId());
+        }
+    }
+
+    private void deleteCurrentProfileMessage(User user) {
+        if (user.getCurrentProfileMessageId() != null) {
+            sender.deleteMessage(user.getChatid(), user.getCurrentProfileMessageId());
         }
     }
 

@@ -9,6 +9,7 @@ import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
+import org.osbo.bots.model.services.AdminBroadcastService;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
 import org.osbo.bots.model.services.ClubProfileEditService;
@@ -31,6 +32,7 @@ public class ReceiverForProcess {
     ClubDiscoveryService clubDiscoveryService;
     ClubProfileEditService clubProfileEditService;
     LikeMatchService likeMatchService;
+    AdminBroadcastService adminBroadcastService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -50,7 +52,7 @@ public class ReceiverForProcess {
     ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
             ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService,
             ClubDiscoveryService clubDiscoveryService, ClubProfileEditService clubProfileEditService,
-            LikeMatchService likeMatchService) {
+            LikeMatchService likeMatchService, AdminBroadcastService adminBroadcastService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
@@ -59,6 +61,7 @@ public class ReceiverForProcess {
         this.clubDiscoveryService = clubDiscoveryService;
         this.clubProfileEditService = clubProfileEditService;
         this.likeMatchService = likeMatchService;
+        this.adminBroadcastService = adminBroadcastService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -80,15 +83,25 @@ public class ReceiverForProcess {
                     "Lo sentimos, no puedes usar el bot porque tu cuenta ha sido inactivada por denuncias de otros usuarios. hasta luego");
             return;
         }
+        if ("/start".equals(update.getText())) {
+            showStartMenu(user, update);
+            userService.save(user);
+            return;
+        }
         if (handleModerationCommand(update)) {
             userService.save(user);
             return;
         }
-        if (clubRegistrationService.handle(user, update)) {
+        if (adminBroadcastService.handle(update.getChatid(), update.getText())) {
+            sender.send(update.getChatid(), "Mensaje enviado.");
             userService.save(user);
             return;
         }
         if (clubProfileEditService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
+        if (clubRegistrationService.handle(user, update)) {
             userService.save(user);
             return;
         }
@@ -109,18 +122,23 @@ public class ReceiverForProcess {
             userService.save(user);
             return;
         }
+        if (update.getText() != null && (update.getText().startsWith("matches_page_")
+                || "matches_clear".equals(update.getText()))) {
+            if (likeMatchService.handleMatchListCallback(user, update)) {
+                userService.save(user);
+                return;
+            }
+        }
+        if ("matches_back".equals(update.getText())) {
+            if (update.getMessageId() != null) {
+                sender.deleteMessage(update.getChatid(), update.getMessageId());
+            }
+            showStartMenu(user, update);
+            userService.save(user);
+            return;
+        }
         if ("start".equals(user.getComando())) {
-            if ("/start".equals(update.getText())) {
-                List<List<Button>> buttons = Arrays.asList(
-                        Arrays.asList(new Button("✏️ Publicar", "/publicar"),
-                                new Button("📢 Ver canal", "/ver_canal"),
-                                new Button("🤝 Entrar al club de amistad", "/club")),
-                        Arrays.asList(new Button("💕 Mis matches", "/mis_matches")));
-                sender.send(update.getChatid(),
-                        "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
-                        true, buttons);
-                user.setComando("start");
-            } else if ("/publicar".equals(update.getText()) && update.getUser() != null
+            if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) == 0) {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("❌ Cancelar", "/cancelar")));
@@ -239,6 +257,19 @@ public class ReceiverForProcess {
             return clubModerationService.blockUser(update.getChatid(), targetChatid);
         }
         return false;
+    }
+
+    private void showStartMenu(User user, MessageUpdate update) {
+        List<List<Button>> buttons = Arrays.asList(
+                Arrays.asList(new Button("✏️ Publicar", "/publicar"),
+                        new Button("📢 Ver canal", "/ver_canal"),
+                        new Button("🤝 Entrar al club de amistad", "/club")),
+                Arrays.asList(new Button("👥 Ver personas", "/ver_personas"),
+                        new Button("💕 Mis matches", "/mis_matches")));
+        sender.send(update.getChatid(),
+                "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                true, buttons);
+        user.setComando("start");
     }
 
     private boolean validarTiempos() {

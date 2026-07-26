@@ -232,7 +232,37 @@ class ClubRegistrationServiceTest {
         boolean handled = service.handle(user, newUpdate("/club", USERNAME));
 
         assertThat(handled).isTrue();
-        verify(sender).send(eq(CHATID), any(), eq(true), any(List.class));
+        verify(sender).sendMarkdown(eq(CHATID), any(String.class), eq(true), any(List.class));
+    }
+
+    @Test
+    void shouldHandleClubCommandFromAnyState() {
+        User user = newUser("publicar");
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_APPROVED);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        boolean handled = service.handle(user, newUpdate("/club", USERNAME));
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo("publicar");
+        verify(sender).sendMarkdown(eq(CHATID), any(String.class), eq(true), any(List.class));
+    }
+
+    @Test
+    void shouldRestartIncompleteRegistrationWhenClubCommandReceived() {
+        User user = newUser("publicar");
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_INCOMPLETE);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+        when(profileRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        boolean handled = service.handle(user, newUpdate("/club", USERNAME));
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_NAME);
+        verify(profileRepository).delete(profile);
+        verify(profileRepository).save(any());
     }
 
     @Test

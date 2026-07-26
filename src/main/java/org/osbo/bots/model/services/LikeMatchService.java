@@ -3,12 +3,15 @@ package org.osbo.bots.model.services;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.LikeMessage;
 import org.osbo.bots.jms.queue.pojos.MatchMessage;
+import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.jms.queue.pojos.ModerationMessage;
 import org.osbo.bots.model.entity.Like;
 import org.osbo.bots.model.entity.Profile;
@@ -49,6 +52,11 @@ public class LikeMatchService {
     public static final String REASON_REPORT_FROM_MATCH = "Perfil reportado desde match";
 
     public static final String SEND_TYPE_MATCH_NOTIFICATION = "match_notification";
+
+    public static final int MATCHES_PER_PAGE = 3;
+    public static final String CALLBACK_MATCHES_PAGE_PREFIX = "matches_page_";
+    public static final String CALLBACK_MATCHES_CLEAR_PREFIX = "matches_clear";
+    public static final String CALLBACK_MATCHES_BACK_PREFIX = "matches_back";
 
     public static final String GENDER_MALE = "MALE";
     public static final String GENDER_FEMALE = "FEMALE";
@@ -192,11 +200,40 @@ public class LikeMatchService {
     }
 
     /**
-     * Lists the current matches for the given chat ID.
+     * Lists the current matches for the given chat ID starting at page 0.
      *
      * @param chatid the chat ID of the user
      */
     public void listMatches(String chatid) {
+        showMatchListPage(chatid, 0, null);
+    }
+
+    /**
+     * Handles pagination and clear callbacks for the match list.
+     *
+     * @param user   the current user
+     * @param update the Telegram update
+     * @return true if the callback was handled
+     */
+    public boolean handleMatchListCallback(User user, MessageUpdate update) {
+        String text = update.getText();
+        if (text == null || update.getMessageId() == null) {
+            return false;
+        }
+        if (text.startsWith(CALLBACK_MATCHES_PAGE_PREFIX)) {
+            String pageStr = text.substring(CALLBACK_MATCHES_PAGE_PREFIX.length());
+            int page = Integer.parseInt(pageStr);
+            showMatchListPage(user.getChatid(), page, update.getMessageId());
+            return true;
+        }
+        if (CALLBACK_MATCHES_CLEAR_PREFIX.equals(text)) {
+            clearMatches(user.getChatid(), update.getMessageId());
+            return true;
+        }
+        return false;
+    }
+
+    private void showMatchListPage(String chatid, int page, Integer messageIdToDelete) {
         if (chatid == null || chatid.isBlank()) {
             return;
         }
@@ -207,36 +244,94 @@ public class LikeMatchService {
             return;
         }
 
-        List<Like> matches = likeRepository.findByFromChatidOrToChatidAndMatchedTrue(chatid);
-        if (matches.isEmpty()) {
+        List<Profile> uniqueMatches = findUniqueMatches(chatid);
+        if (uniqueMatches.isEmpty()) {
             sender.send(chatid, MESSAGE_NO_MATCHES);
             return;
         }
 
-        StringBuilder text = new StringBuilder("Tus matches:\n\n");
-        List<List<Button>> buttons = new ArrayList<>();
+        int totalPages = (int) Math.ceil((double) uniqueMatches.size() / MATCHES_PER_PAGE);
+        int safePage = Math.max(0, Math.min(page, totalPages - 1));
+        int start = safePage * MATCHES_PER_PAGE;
+        int end = Math.min(start + MATCHES_PER_PAGE, uniqueMatches.size());
+        List<Profile> pageMatches = uniqueMatches.subList(start, end);
+
+        String text = buildMatchListText(pageMatches, safePage, totalPages);
+        List<List<Button>> buttons = buildMatchListNavigationButtons(safePage, totalPages);
+
+        if (messageIdToDelete != null) {
+            sender.deleteMessage(chatid, messageIdToDelete);
+        }
+        sender.send(chatid, text, "text", null, null, false, buttons, null);
+    }
+
+    private List<Profile> findUniqueMatches(String chatid) {
+        List<Like> matches = likeRepository.findByFromChatidOrToChatidAndMatchedTrue(chatid);
+        Set<String> seen = new HashSet<>();
+        List<Profile> unique = new ArrayList<>();
         for (Like like : matches) {
             String otherChatid = chatid.equals(like.getFromChatid()) ? like.getToChatid() : like.getFromChatid();
-            Profile other = profileRepository.findByChatid(otherChatid);
-            if (other == null) {
-                continue;
+            if (seen.add(otherChatid)) {
+                Profile other = profileRepository.findByChatid(otherChatid);
+                if (other != null) {
+                    unique.add(other);
+                }
             }
-            appendMatchEntry(text, other);
-            buttons.addAll(buildMatchButtons(other));
         }
-        sender.send(chatid, text.toString(), "text", null, null, false, buttons, null);
+        return unique;
+    }
+
+    private String buildMatchListText(List<Profile> matches, int page, int totalPages) {
+        StringBuilder text = new StringBuilder();
+        text.append("*Tus matches* (página ").append(page + 1).append(" de ").append(totalPages).append(")\n\n");
+        if (matches.isEmpty()) {
+            text.append("No hay matches en esta página.");
+            return text.toString();
+        }
+        for (Profile other : matches) {
+            appendMatchEntry(text, other);
+        }
+        return text.toString();
     }
 
     private void appendMatchEntry(StringBuilder text, Profile other) {
-        text.append("• ").append(other.getName()).append(", ").append(other.getAge()).append(" años · ")
-                .append(other.getCity()).append("\n");
+        text.append("• *").append(MarkdownEscaper.escape(other.getName())).append("*, ")
+                .append(other.getAge()).append(" años · ")
+                .append(MarkdownEscaper.escape(other.getCity())).append("\n");
         if (other.getContactUsername() != null && !other.getContactUsername().isBlank()) {
-            text.append("  Telegram: @").append(other.getContactUsername()).append("\n");
+            text.append("  ✉️ Telegram: @").append(MarkdownEscaper.escape(other.getContactUsername())).append("\n");
         }
         if (other.getWhatsapp() != null && !other.getWhatsapp().isBlank()) {
-            text.append("  WhatsApp: ").append(other.getWhatsapp()).append("\n");
+            text.append("  📱 WhatsApp: ").append(MarkdownEscaper.escape(other.getWhatsapp())).append("\n");
         }
         text.append("\n");
+    }
+
+    private List<List<Button>> buildMatchListNavigationButtons(int page, int totalPages) {
+        List<Button> navigation = new ArrayList<>();
+        if (page > 0) {
+            navigation.add(new Button("⬅️ Anterior", CALLBACK_MATCHES_PAGE_PREFIX + (page - 1)));
+        }
+        if (page < totalPages - 1) {
+            navigation.add(new Button("➡️ Siguiente", CALLBACK_MATCHES_PAGE_PREFIX + (page + 1)));
+        }
+        List<Button> actions = new ArrayList<>();
+        actions.add(new Button("🗑️ Limpiar matches", CALLBACK_MATCHES_CLEAR_PREFIX));
+        actions.add(new Button("🏠 Volver al inicio", CALLBACK_MATCHES_BACK_PREFIX));
+
+        List<List<Button>> rows = new ArrayList<>();
+        if (!navigation.isEmpty()) {
+            rows.add(navigation);
+        }
+        rows.add(actions);
+        return rows;
+    }
+
+    private void clearMatches(String chatid, int messageId) {
+        List<Like> matches = likeRepository.findByFromChatidOrToChatidAndMatchedTrue(chatid);
+        likeRepository.deleteAll(matches);
+        sender.deleteMessage(chatid, messageId);
+        sender.send(chatid, "🗑️ *Tus matches han sido limpiados.*\n\nPodés seguir descubriendo personas con /ver_personas.");
     }
 
     /**

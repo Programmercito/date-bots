@@ -101,7 +101,7 @@ public class ClubRegistrationService {
         String comando = user.getComando();
         String text = update.getText();
 
-        if ("start".equals(comando) && (COMMAND_CLUB.equals(text) || CALLBACK_CLUB_ENTER.equals(text))) {
+        if (COMMAND_CLUB.equals(text) || CALLBACK_CLUB_ENTER.equals(text)) {
             handleClubCommand(user, update);
             return true;
         }
@@ -140,6 +140,10 @@ public class ClubRegistrationService {
                 }
             }
             case STATUS_PAUSED -> sendPausedStatus(update.getChatid(), profile);
+            case STATUS_INCOMPLETE -> {
+                profileRepository.delete(profile);
+                startRegistration(user, update);
+            }
             default -> startRegistration(user, update);
         }
     }
@@ -161,30 +165,30 @@ public class ClubRegistrationService {
 
     public void sendApprovedStatus(String chatid, Profile profile) {
         List<List<Button>> buttons = Arrays.asList(
-                Arrays.asList(new Button("Ver personas", "/ver_personas"),
-                        new Button("Editar perfil", "/editar_perfil")),
-                Arrays.asList(new Button("Pausar perfil", "/pausar_perfil"),
-                        new Button("Volver al inicio", "/start")));
-        sender.send(chatid,
-                "Tu perfil de @" + profile.getContactUsername() + " está aprobado. Usá los botones para continuar.",
+                Arrays.asList(new Button("🔍 Ver personas", "/ver_personas"),
+                        new Button("✏️ Editar perfil", "/editar_perfil")),
+                Arrays.asList(new Button("⏸️ Pausar perfil", "/pausar_perfil"),
+                        new Button("🏠 Volver al inicio", "/start")));
+        sender.sendMarkdown(chatid,
+                "🎉 *Tu perfil de @" + MarkdownEscaper.escape(profile.getContactUsername()) + " está aprobado.*\n\n¿Qué querés hacer?",
                 true, buttons);
     }
 
     private void sendRejectedStatus(String chatid, Profile profile) {
         List<List<Button>> buttons = Arrays.asList(
-                Arrays.asList(new Button("Volver a registrarse", CALLBACK_CLUB_ENTER),
-                        new Button("Volver al inicio", "/start")));
-        sender.send(chatid,
-                "Tu perfil fue rechazado. Podés volver a registrarte con los datos correctos.",
+                Arrays.asList(new Button("🔄 Volver a registrarse", CALLBACK_CLUB_ENTER),
+                        new Button("🏠 Volver al inicio", "/start")));
+        sender.sendMarkdown(chatid,
+                "⛔ *Tu perfil fue rechazado.*\n\nPodés volver a registrarte con los datos correctos.",
                 true, buttons);
     }
 
     private void sendPausedStatus(String chatid, Profile profile) {
         List<List<Button>> buttons = Arrays.asList(
-                Arrays.asList(new Button("Activar perfil", "/activar_perfil"),
-                        new Button("Volver al inicio", "/start")));
-        sender.send(chatid,
-                "Tu perfil está pausado y no aparece en la búsqueda. Activalo cuando quieras.",
+                Arrays.asList(new Button("▶️ Activar perfil", "/activar_perfil"),
+                        new Button("🏠 Volver al inicio", "/start")));
+        sender.sendMarkdown(chatid,
+                "⏸️ *Tu perfil está pausado* y no aparece en la búsqueda. Activalo cuando quieras.",
                 true, buttons);
     }
 

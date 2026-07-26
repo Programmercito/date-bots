@@ -1,5 +1,7 @@
 package org.osbo.bots.model.services;
 
+import java.util.List;
+
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,10 @@ public class UserService {
 
     public User findById(String id) {
         return userRepository.findById(id).orElse(null);
+    }
+
+    public List<User> findAll() {
+        return userRepository.findAll();
     }
 
     public User persiste(User user) {

@@ -24,6 +24,7 @@ import java.util.List;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.LikeMessage;
 import org.osbo.bots.jms.queue.pojos.MatchMessage;
+import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.jms.queue.pojos.ModerationMessage;
 import org.osbo.bots.model.entity.Like;
 import org.osbo.bots.model.entity.Profile;
@@ -251,41 +252,123 @@ class LikeMatchServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldListMatchesWithContactInfo() {
+    void shouldListMatchesWithoutDuplicates() {
         Profile me = approvedProfile("me");
         Profile matchOne = approvedProfile("match-1");
         matchOne.setName("Carla");
-        matchOne.setBirthDate(LocalDate.of(1996, 4, 20));
-        matchOne.setAge(null);
         matchOne.setContactUsername("carla");
         matchOne.setWhatsapp("+591 70011111");
-        Profile matchTwo = approvedProfile("match-2");
-        matchTwo.setName("Diana");
-        matchTwo.setBirthDate(LocalDate.of(1998, 6, 15));
-        matchTwo.setAge(null);
-        matchTwo.setContactUsername("diana");
         when(profileRepository.findByChatid("me")).thenReturn(me);
+        // Both directions of the same match are returned by the repository
         Like likeOne = matchedLike("me", "match-1");
-        Like likeTwo = matchedLike("match-2", "me");
+        Like likeTwo = matchedLike("match-1", "me");
         when(likeRepository.findByFromChatidOrToChatidAndMatchedTrue("me")).thenReturn(List.of(likeOne, likeTwo));
         when(profileRepository.findByChatid("match-1")).thenReturn(matchOne);
-        when(profileRepository.findByChatid("match-2")).thenReturn(matchTwo);
 
         service.listMatches("me");
 
-        ArgumentCaptor<String> chatidCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
+                eq((String) null), eq(false), any(List.class), eq((String) null));
+        assertThat(textCaptor.getValue()).containsOnlyOnce("Carla");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldPaginateMatchesAndShowNavigationButtons() {
+        Profile me = approvedProfile("me");
+        Profile matchOne = approvedProfile("match-1");
+        matchOne.setName("Carla");
+        Profile matchTwo = approvedProfile("match-2");
+        matchTwo.setName("Diana");
+        Profile matchThree = approvedProfile("match-3");
+        matchThree.setName("Elena");
+        Profile matchFour = approvedProfile("match-4");
+        matchFour.setName("Fernanda");
+        when(profileRepository.findByChatid("me")).thenReturn(me);
+        when(likeRepository.findByFromChatidOrToChatidAndMatchedTrue("me")).thenReturn(List.of(
+                matchedLike("me", "match-1"),
+                matchedLike("me", "match-2"),
+                matchedLike("me", "match-3"),
+                matchedLike("me", "match-4")));
+        when(profileRepository.findByChatid("match-1")).thenReturn(matchOne);
+        when(profileRepository.findByChatid("match-2")).thenReturn(matchTwo);
+        when(profileRepository.findByChatid("match-3")).thenReturn(matchThree);
+        when(profileRepository.findByChatid("match-4")).thenReturn(matchFour);
+
+        service.listMatches("me");
+
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
-        verify(sender).send(chatidCaptor.capture(), textCaptor.capture(), eq("text"), eq((String) null),
+        verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
                 eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null));
-        assertThat(chatidCaptor.getValue()).isEqualTo("me");
-        assertThat(textCaptor.getValue()).contains("Carla", "Diana", "Santa Cruz", "30 años", "28 años");
-        assertThat(textCaptor.getValue()).doesNotContain("1996-04-20", "1998-06-15");
+        assertThat(textCaptor.getValue()).contains("Carla", "Diana", "Elena");
+        assertThat(textCaptor.getValue()).doesNotContain("Fernanda");
+        assertThat(textCaptor.getValue()).contains("página 1 de 2");
         List<List<Button>> buttons = buttonsCaptor.getValue();
-        assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("Telegram @carla")
-                && "https://t.me/carla".equals(b.getUrl()));
-        assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("WhatsApp +591 70011111")
-                && "https://wa.me/59170011111".equals(b.getUrl()));
+        assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("Siguiente")
+                && "matches_page_1".equals(b.getCallbackData()));
+        assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("Limpiar matches")
+                && "matches_clear".equals(b.getCallbackData()));
+        assertThat(flattenButtons(buttons)).anyMatch(b -> b.getText().contains("Volver al inicio")
+                && "matches_back".equals(b.getCallbackData()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldNavigateToNextMatchPageAndDeletePreviousMessage() {
+        Profile me = approvedProfile("me");
+        Profile matchOne = approvedProfile("match-1");
+        matchOne.setName("Carla");
+        Profile matchTwo = approvedProfile("match-2");
+        matchTwo.setName("Diana");
+        Profile matchThree = approvedProfile("match-3");
+        matchThree.setName("Elena");
+        Profile matchFour = approvedProfile("match-4");
+        matchFour.setName("Fernanda");
+        when(profileRepository.findByChatid("me")).thenReturn(me);
+        when(likeRepository.findByFromChatidOrToChatidAndMatchedTrue("me")).thenReturn(List.of(
+                matchedLike("me", "match-1"),
+                matchedLike("me", "match-2"),
+                matchedLike("me", "match-3"),
+                matchedLike("me", "match-4")));
+        when(profileRepository.findByChatid("match-1")).thenReturn(matchOne);
+        when(profileRepository.findByChatid("match-2")).thenReturn(matchTwo);
+        when(profileRepository.findByChatid("match-3")).thenReturn(matchThree);
+        when(profileRepository.findByChatid("match-4")).thenReturn(matchFour);
+        User user = activeUser("me");
+        MessageUpdate update = newUpdate("matches_page_1");
+        update.setMessageId(100);
+
+        boolean handled = service.handleMatchListCallback(user, update);
+
+        assertThat(handled).isTrue();
+        verify(sender).deleteMessage("me", 100);
+        ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
+                eq((String) null), eq(false), any(List.class), eq((String) null));
+        assertThat(textCaptor.getValue()).contains("Fernanda");
+        assertThat(textCaptor.getValue()).contains("página 2 de 2");
+    }
+
+    @Test
+    void shouldClearMatchesAndDeleteMessage() {
+        Profile me = approvedProfile("me");
+        when(profileRepository.findByChatid("me")).thenReturn(me);
+        when(likeRepository.findByFromChatidOrToChatidAndMatchedTrue("me")).thenReturn(List.of(
+                matchedLike("me", "match-1"),
+                matchedLike("match-1", "me")));
+        when(profileRepository.findByChatid("match-1")).thenReturn(approvedProfile("match-1"));
+        User user = activeUser("me");
+        MessageUpdate update = newUpdate("matches_clear");
+        update.setMessageId(200);
+
+        boolean handled = service.handleMatchListCallback(user, update);
+
+        assertThat(handled).isTrue();
+        verify(sender).deleteMessage("me", 200);
+        verify(likeRepository).deleteAll(any(List.class));
+        verify(sender).send(eq("me"), anyString());
     }
 
     @Test
@@ -372,6 +455,13 @@ class LikeMatchServiceTest {
         user.setChatid(chatid);
         user.setEstado("activo");
         return user;
+    }
+
+    private MessageUpdate newUpdate(String text) {
+        MessageUpdate update = new MessageUpdate();
+        update.setChatid("me");
+        update.setText(text);
+        return update;
     }
 
     private User blockedUser(String chatid) {
