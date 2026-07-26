@@ -26,10 +26,10 @@ Chain strategy: pending
 
 ## Phase 1: Foundation
 
-- [ ] 1.1 RED: Create `src/test/java/org/osbo/bots/util/AgeCalculatorTest.java` with fixed-clock tests for valid adult, birthday-not-yet-reached, birthday-today, La Paz timezone boundary, legacy fallback, and null handling.
-- [ ] 1.2 GREEN: Create `src/main/java/org/osbo/bots/util/AgeCalculator.java` with `calculateAge(LocalDate, Integer, Clock)` and `parseUserDate(String)` methods.
-- [ ] 1.3 REFACTOR: Extract private helpers in AgeCalculator if parsing and age math overlap.
-- [ ] 1.4 Modify `src/main/java/org/osbo/bots/model/entity/Profile.java` to add `birthDate` column, make `age` nullable, and replace Lombok-generated `getAge()` with a computed accessor.
+- [x] 1.1 RED: Create `src/test/java/org/osbo/bots/util/AgeCalculatorTest.java` with fixed-clock tests for valid adult, birthday-not-yet-reached, birthday-today, La Paz timezone boundary, legacy fallback, and null handling.
+- [x] 1.2 GREEN: Create `src/main/java/org/osbo/bots/util/AgeCalculator.java` with `calculateAge(LocalDate, Integer, Clock)` and `parseUserDate(String)` methods.
+- [x] 1.3 REFACTOR: Extract private helpers in AgeCalculator if parsing and age math overlap.
+- [x] 1.4 Modify `src/main/java/org/osbo/bots/model/entity/Profile.java` to add `birthDate` column, make `age` nullable, and replace Lombok-generated `getAge()` with a computed accessor.
 
 ## Phase 2: Core Implementation
 

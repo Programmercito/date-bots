@@ -1,5 +1,7 @@
 package org.osbo.bots.model.entity;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -7,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
+
+import org.osbo.bots.util.AgeCalculator;
 
 /**
  * Friendship club profile linked to a {@link User}.
@@ -26,6 +30,9 @@ public class Profile {
     private String name;
 
     private Integer age;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     private String gender;
 
@@ -66,5 +73,15 @@ public class Profile {
 
     @Column(name = "updated_at")
     private String updatedAt;
+
+    /**
+     * Returns the age calculated from the birthdate when available, otherwise falls
+     * back to the legacy age column.
+     *
+     * @return the calculated age, or null if neither value is available
+     */
+    public Integer getAge() {
+        return AgeCalculator.calculateAge(birthDate, age);
+    }
 
 }
