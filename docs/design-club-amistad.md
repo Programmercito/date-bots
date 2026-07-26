@@ -21,7 +21,7 @@ The existing bot allows users to publish ephemeral messages to a channel. The ne
 | Messaging | JMS/ActiveMQ queues | Already in use; keeps interactions asynchronous and responsive. |
 | Photo storage | Telegram `file_id` only, no local files | Privacy and disk-space optimization. The bot forwards the photo to viewers using Telegram's file ID. |
 | Discovery | One profile per message | Cleaner UX in Telegram, easier moderation. |
-| Contact on match | Telegram username only | Mandatory field. No WhatsApp/Instagram for now. |
+| Contact on match | Telegram username and/or WhatsApp | Require at least one contact method so matches can reach each other. |
 | Target audience | Bolivia first, model open to other countries later | Country stored explicitly to allow expansion. |
 | Filters | Hetero man, hetero woman, bi woman only | Product decision. UI enforces this; users outside these options cannot register for the club. |
 | Age | 18+ only | Hard validation during registration. |
@@ -86,6 +86,7 @@ spring.datasource.hikari.minimum-idle=2
 | `looking_for` | TEXT | What the user wants: `FRIENDSHIP`, `RELATIONSHIP`, `ONLINE_RELATIONSHIP`, `SUGAR_DADDY`, `LOVERS` |
 | `photo_file_id` | TEXT | Telegram file_id used to forward the photo |
 | `contact_username` | TEXT | Telegram username for matches |
+| `whatsapp` | TEXT | Optional WhatsApp number for matches |
 | `status` | TEXT | `PENDING`, `APPROVED`, `REJECTED`, `PAUSED` |
 | `created_at` | TEXT | ISO-8601 timestamp |
 | `updated_at` | TEXT | ISO-8601 timestamp |
@@ -163,6 +164,7 @@ The bot uses a state machine stored in `users.comando`.
 | `club_register_traits` | Asking for traits |
 | `club_register_looking_for` | Asking for what they want (predefined buttons) |
 | `club_register_photo` | Waiting for profile photo |
+| `club_register_contact` | Asking for WhatsApp or confirming Telegram username |
 | `club_register_preview` | Showing preview before submission |
 | `club_browsing` | Browsing discovery profiles |
 | `publicar` | Existing: writing a channel post |
@@ -197,6 +199,7 @@ The bot uses a state machine stored in `users.comando`.
 | `club_next` | Show next profile |
 | `club_preview_ok` | Submit profile for approval |
 | `club_preview_edit` | Edit profile before submission |
+| `club_match_report_<chatid>` | Report a matched profile |
 
 ## 8. User Flows
 
@@ -219,9 +222,11 @@ The bot uses a state machine stored in `users.comando`.
 11. Bot asks for `traits`.
 12. Bot asks for `looking_for` using predefined buttons. Stored values are `FRIENDSHIP`, `RELATIONSHIP`, `ONLINE_RELATIONSHIP`, `SUGAR_DADDY`, `LOVERS` (button labels are Spanish).
 13. Bot asks for `photo`.
-14. Bot shows preview.
-15. User confirms → profile saved with status `PENDING` and sent to `queue.moderation`.
-16. Admin receives the profile with approve/reject/block buttons.
+14. Bot asks for a contact method: WhatsApp number or confirmation of Telegram username.
+15. Bot validates that at least one of Telegram username or WhatsApp is present.
+16. Bot shows preview.
+17. User confirms → profile saved with status `PENDING` and sent to `queue.moderation`.
+18. Admin receives the profile with approve/reject/block buttons.
 
 ### 8.2 Discovery
 
@@ -237,22 +242,34 @@ The bot uses a state machine stored in `users.comando`.
 ### 8.3 Like & Match
 
 1. `queue.like` consumer receives `(from_chatid, to_chatid)`.
-2. Within a single transaction:
+2. Validate the target profile is `APPROVED` and the target user is not blocked.
+3. If the target is unavailable, notify the liker and do not persist the like.
+4. Within a single transaction:
    - Insert like (ignore if duplicate).
    - Check if reverse like exists.
-3. If reverse like exists:
+5. If reverse like exists:
    - Mark both likes as `matched = 1`.
    - Send both chat IDs to `queue.match`.
-4. If no reverse like:
-   - Notify `to_chatid`: "Someone liked you. Open /ver_personas to see who."
+6. If no reverse like:
+   - Notify `to_chatid` anonymously that someone liked their profile.
 
 ### 8.4 Match Notification
 
 1. `queue.match` consumer receives `(chatid_a, chatid_b)`.
 2. Fetch both profiles.
-3. Send to both users:
-   - "¡Match! Puedes escribirle a @username"
-4. Include contact button linking to `https://t.me/<username>`.
+3. For each user, send a rich match notification about the other profile:
+   - Profile photo with caption (name, age, gender, orientation, city, description, tastes, traits, what they are looking for).
+   - Telegram contact button linking to `https://t.me/<username>` when available.
+   - WhatsApp contact button linking to `https://wa.me/<number>` when available.
+   - Report button that resubmits the profile to `queue.moderation` as a `REPORT`.
+4. If the profile photo `file_id` is broken, fall back to a text-only message and do not change the profile status.
+
+### 8.5 Listing Matches
+
+1. User sends `/mis_matches` or taps **Mis matches**.
+2. If the user has an `APPROVED` profile, query all `likes` rows where `matched = 1` and the user is either `from_chatid` or `to_chatid`.
+3. For each match, show the other user's name, age, city, and contact buttons.
+4. If there are no matches, send a friendly empty-state message.
 
 ### 8.5 Admin Moderation
 
@@ -334,15 +351,18 @@ The bot uses a state machine stored in `users.comando`.
 - Like/skip edits the same message; next profile sends a new message and deletes the previous one.
 - Broken `file_id` during discovery automatically deactivates the profile (`REJECTED`), notifies the owner, and allows re-registration with `/club`.
 
-### Phase 5 — Likes & Matches (NOT YET IMPLEMENTED)
+### Phase 5 — Likes & Matches ✅
 - Like callback sends to `queue.like`.
-- Consumer detects mutual match and sends to `queue.match`.
-- Match consumer notifies both users with Telegram usernames.
+- Consumer validates target, persists the like, detects mutual matches, handles duplicates and unavailable targets.
+- Mutual match sends both chat IDs to `queue.match`.
+- Match consumer sends rich notification to both users with profile photo, details, Telegram/WhatsApp contact buttons, and a report button.
+- Broken match-notification photo falls back to text-only without changing the profile status.
+- `/mis_matches` command lists current matches with contact info.
 
-### Phase 6 — Daily Limits & Reports (NOT YET IMPLEMENTED)
+### Phase 6 — Daily Limits & Reports (PARTIALLY IMPLEMENTED)
 - Track likes/views in `daily_limits` via `queue.analytics`.
-- Add report button and `reports` table.
-- Add `/mis_matches` command.
+- Report button from discovery and match notifications saves a `REPORT` to `queue.moderation`.
+- Add daily limits enforcement (future work).
 
 ### Phase 7 — Edit / Pause / Payment-Ready Hooks (NOT YET IMPLEMENTED)
 - Edit profile flow.

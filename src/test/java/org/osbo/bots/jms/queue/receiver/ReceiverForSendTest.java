@@ -108,4 +108,31 @@ class ReceiverForSendTest {
         assertThat(viewer.getCurrentProfileMessageId()).isEqualTo(42);
         verify(userService).save(viewer);
     }
+
+    @Test
+    void shouldFallBackToTextWhenMatchNotificationPhotoFails() {
+        SendResponse failedResponse = mock(SendResponse.class);
+        when(failedResponse.isOk()).thenReturn(false);
+        when(bot.execute(any(SendPhoto.class))).thenReturn(failedResponse);
+
+        SendResponse okResponse = mock(SendResponse.class);
+        when(okResponse.isOk()).thenReturn(true);
+        when(bot.execute(any(SendMessage.class))).thenReturn(okResponse);
+
+        MessageSend message = new MessageSend();
+        message.setChatid(VIEWER_CHATID);
+        message.setTipo("match_notification");
+        message.setText("Match caption");
+        message.setMedias(new String[] { "broken-match-photo-id" });
+        message.setButtons(List.of(List.of(new Button("Report", "club_match_report_" + TARGET_CHATID))));
+
+        receiver.sendMessage(message);
+
+        ArgumentCaptor<SendMessage> messageCaptor = ArgumentCaptor.forClass(SendMessage.class);
+        verify(bot, org.mockito.Mockito.times(1)).execute(any(SendPhoto.class));
+        verify(bot, org.mockito.Mockito.times(1)).execute(messageCaptor.capture());
+        SendMessage fallback = messageCaptor.getValue();
+        assertThat((String) fallback.getParameters().get("chat_id")).isEqualTo(VIEWER_CHATID);
+        assertThat((String) fallback.getParameters().get("text")).isEqualTo("Match caption");
+    }
 }

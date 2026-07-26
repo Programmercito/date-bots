@@ -29,7 +29,23 @@ Last updated: 2026-07-25
 | `judgment-day` | Trigger: judgment day, dual review, adversarial review, juzgar. Run blind dual review, fix confirmed issues, then re-judge. | user | `C:\Users\hered\.config\opencode\skills\judgment-day\SKILL.md` |
 | `skill-creator` | Trigger: new skills, agent instructions, documenting AI usage patterns. Create LLM-first skills with valid frontmatter. | user | `C:\Users\hered\.config\opencode\skills\skill-creator\SKILL.md` |
 | `skill-improver` | Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills. | user | `C:\Users\hered\.config\opencode\skills\skill-improver\SKILL.md` |
+| `sdd-apply` | Implement SDD tasks from specs and design. Trigger: orchestrator launches apply for one or more change tasks. | user | `C:\Users\hered\.config\opencode\skills\sdd-apply\SKILL.md` |
+| `sdd-archive` | Archive a completed SDD change by syncing delta specs. Trigger: orchestrator launches archive after implementation and verification. | user | `C:\Users\hered\.config\opencode\skills\sdd-archive\SKILL.md` |
+| `sdd-design` | Create the SDD technical design and architecture approach. Trigger: orchestrator launches design for a change. | user | `C:\Users\hered\.config\opencode\skills\sdd-design\SKILL.md` |
+| `sdd-explore` | Explore SDD ideas before committing to a change. Trigger: orchestrator launches exploration or requirement clarification. | user | `C:\Users\hered\.config\opencode\skills\sdd-explore\SKILL.md` |
+| `sdd-init` | Trigger: sdd init, iniciar sdd, openspec init. Initialize SDD context, testing capabilities, registry, and persistence. | user | `C:\Users\hered\.config\opencode\skills\sdd-init\SKILL.md` |
+| `sdd-onboard` | Walk users through the SDD workflow on the real codebase. Trigger: orchestrator launches onboarding for the full SDD cycle. | user | `C:\Users\hered\.config\opencode\skills\sdd-onboard\SKILL.md` |
+| `sdd-propose` | Create an SDD change proposal with intent, scope, and approach. Trigger: orchestrator launches proposal work for a change. | user | `C:\Users\hered\.config\opencode\skills\sdd-propose\SKILL.md` |
+| `sdd-spec` | Write SDD delta specs with requirements and scenarios. Trigger: orchestrator launches spec work for a change. | user | `C:\Users\hered\.config\opencode\skills\sdd-spec\SKILL.md` |
+| `sdd-tasks` | Break an SDD change into implementation tasks. Trigger: orchestrator launches task planning for a change. | user | `C:\Users\hered\.config\opencode\skills\sdd-tasks\SKILL.md` |
+| `sdd-verify` | Trigger: SDD verification phase, verify change. Execute tests and prove implementation matches specs, design, and tasks. | user | `C:\Users\hered\.config\opencode\skills\sdd-verify\SKILL.md` |
 | `work-unit-commits` | Plan commits as reviewable work units. Trigger: implementation, commit splitting, chained PRs, or keeping tests and docs with code. | user | `C:\Users\hered\.config\opencode\skills\work-unit-commits\SKILL.md` |
+
+## Project convention files
+
+| File | Type | Notes |
+| --- | --- | --- |
+| `AGENTS.md` | Agent guide | Project overview, stack, commands, state machine, JMS queues, data model, conventions, TODO phases. |
 
 ## Loading protocol
 

@@ -12,6 +12,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
 import org.osbo.bots.model.services.ClubRegistrationService;
+import org.osbo.bots.model.services.LikeMatchService;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
@@ -27,6 +28,7 @@ public class ReceiverForProcess {
     ClubRegistrationService clubRegistrationService;
     ClubModerationService clubModerationService;
     ClubDiscoveryService clubDiscoveryService;
+    LikeMatchService likeMatchService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -45,13 +47,14 @@ public class ReceiverForProcess {
 
     ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
             ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService,
-            ClubDiscoveryService clubDiscoveryService) {
+            ClubDiscoveryService clubDiscoveryService, LikeMatchService likeMatchService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
         this.clubRegistrationService = clubRegistrationService;
         this.clubModerationService = clubModerationService;
         this.clubDiscoveryService = clubDiscoveryService;
+        this.likeMatchService = likeMatchService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -85,12 +88,26 @@ public class ReceiverForProcess {
             userService.save(user);
             return;
         }
+        if ("/mis_matches".equals(update.getText())) {
+            likeMatchService.listMatches(update.getChatid());
+            user.setComando("start");
+            userService.save(user);
+            return;
+        }
+        if (update.getText() != null && update.getText().startsWith("club_match_report_")) {
+            String reportedChatid = update.getText().substring("club_match_report_".length());
+            likeMatchService.reportMatch(update.getChatid(), reportedChatid);
+            user.setComando("start");
+            userService.save(user);
+            return;
+        }
         if ("start".equals(user.getComando())) {
             if ("/start".equals(update.getText())) {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("✏️ Publicar", "/publicar"),
                                 new Button("📢 Ver canal", "/ver_canal"),
-                                new Button("🤝 Entrar al club de amistad", "/club")));
+                                new Button("🤝 Entrar al club de amistad", "/club")),
+                        Arrays.asList(new Button("💕 Mis matches", "/mis_matches")));
                 sender.send(update.getChatid(),
                         "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
                         true, buttons);

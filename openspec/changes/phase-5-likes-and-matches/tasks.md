@@ -32,34 +32,34 @@ Chain strategy: pending
 
 ## Phase 2: Core Implementation
 
-- [ ] 2.1 Create `src/main/java/org/osbo/bots/model/services/LikeMatchService.java` with `processLike`, `notifyMatch`, `listMatches`.
-- [ ] 2.2 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForLike.java` to delegate to `LikeMatchService.processLike`.
-- [ ] 2.3 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForMatch.java` to delegate to `LikeMatchService.notifyMatch`.
-- [ ] 2.4 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForProcess.java` to route `/mis_matches` to `LikeMatchService.listMatches`.
+- [x] 2.1 Create `src/main/java/org/osbo/bots/model/services/LikeMatchService.java` with `processLike`, `notifyMatch`, `listMatches`.
+- [x] 2.2 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForLike.java` to delegate to `LikeMatchService.processLike`.
+- [x] 2.3 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForMatch.java` to delegate to `LikeMatchService.notifyMatch`.
+- [x] 2.4 Modify `src/main/java/org/osbo/bots/jms/queue/receiver/ReceiverForProcess.java` to route `/mis_matches` to `LikeMatchService.listMatches`.
 
 ## Phase 3: Testing (Strict TDD)
 
-- [ ] 3.1 RED: write `src/test/java/org/osbo/bots/model/services/LikeMatchServiceTest.java` for persist/match/unavailable/duplicate like scenarios.
-- [ ] 3.2 GREEN: implement `LikeMatchService.processLike` to pass tests.
-- [ ] 3.3 RED: add match-notification and photo-fallback tests to `LikeMatchServiceTest.java`.
-- [ ] 3.4 GREEN: implement `LikeMatchService.notifyMatch` to pass tests.
-- [ ] 3.5 RED: add `/mis_matches` query and empty-state tests to `LikeMatchServiceTest.java`.
-- [ ] 3.6 GREEN: implement `LikeMatchService.listMatches` to pass tests.
-- [ ] 3.7 REFACTOR: extract common caption/button builders in `LikeMatchService`.
-- [ ] 3.8 RED: add contact-step validation tests to `src/test/java/org/osbo/bots/model/services/ClubRegistrationServiceTest.java`.
-- [ ] 3.9 GREEN: implement contact method validation in `ClubRegistrationService.java`.
-- [ ] 3.10 RED: write `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForLikeTest.java`.
-- [ ] 3.11 GREEN: wire `ReceiverForLike` to `LikeMatchService`.
-- [ ] 3.12 RED: write `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForMatchTest.java`.
-- [ ] 3.13 GREEN: wire `ReceiverForMatch` to `LikeMatchService`.
+- [x] 3.1 RED: write `src/test/java/org/osbo/bots/model/services/LikeMatchServiceTest.java` for persist/match/unavailable/duplicate like scenarios.
+- [x] 3.2 GREEN: implement `LikeMatchService.processLike` to pass tests.
+- [x] 3.3 RED: add match-notification and photo-fallback tests to `LikeMatchServiceTest.java`.
+- [x] 3.4 GREEN: implement `LikeMatchService.notifyMatch` to pass tests.
+- [x] 3.5 RED: add `/mis_matches` query and empty-state tests to `LikeMatchServiceTest.java`.
+- [x] 3.6 GREEN: implement `LikeMatchService.listMatches` to pass tests.
+- [x] 3.7 REFACTOR: extract common caption/button builders in `LikeMatchService`.
+- [x] 3.8 RED: add contact-step validation tests to `src/test/java/org/osbo/bots/model/services/ClubRegistrationServiceTest.java`.
+- [x] 3.9 GREEN: implement contact method validation in `ClubRegistrationService.java`.
+- [x] 3.10 RED: write `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForLikeTest.java`.
+- [x] 3.11 GREEN: wire `ReceiverForLike` to `LikeMatchService`.
+- [x] 3.12 RED: write `src/test/java/org/osbo/bots/jms/queue/receiver/ReceiverForMatchTest.java`.
+- [x] 3.13 GREEN: wire `ReceiverForMatch` to `LikeMatchService`.
 
 ## Phase 4: Integration
 
-- [ ] 4.1 Implement `club_match_report_<chatid>` callback in `LikeMatchService` to send `REPORT` `ModerationMessage` to `queue.moderation`.
-- [ ] 4.2 Verify `src/main/java/org/osbo/bots/jms/queue/pojos/MatchMessage.java` carries both chat IDs and add fields if needed.
-- [ ] 4.3 Update `docs/design-club-amistad.md` contact-method and match sections.
+- [x] 4.1 Implement `club_match_report_<chatid>` callback in `LikeMatchService` to send `REPORT` `ModerationMessage` to `queue.moderation`.
+- [x] 4.2 Verify `src/main/java/org/osbo/bots/jms/queue/pojos/MatchMessage.java` carries both chat IDs and add fields if needed.
+- [x] 4.3 Update `docs/design-club-amistad.md` contact-method and match sections.
 
 ## Phase 5: Cleanup
 
-- [ ] 5.1 Remove stub logging from `ReceiverForLike.java` and `ReceiverForMatch.java`.
-- [ ] 5.2 Run `.\mvnw test` and fix failures.
+- [x] 5.1 Remove stub logging from `ReceiverForLike.java` and `ReceiverForMatch.java`.
+- [x] 5.2 Run `.\mvnw test` and fix failures.

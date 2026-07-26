@@ -188,8 +188,18 @@ public class ReceiverForSend {
             System.out.println("Error al enviar mensaje");
             if ("discovery_profile".equals(message.getTipo())) {
                 handleBrokenDiscoveryPhoto(message, bot);
+            } else if ("match_notification".equals(message.getTipo())) {
+                sendFallbackTextMessage(message, bot);
             }
         }
+    }
+
+    private void sendFallbackTextMessage(MessageSend message, TelegramBot bot) {
+        SendMessage fallback = new SendMessage(message.getChatid(), message.getText());
+        if (message.getButtons() != null && !message.getButtons().isEmpty()) {
+            fallback.replyMarkup(buildMarkup(message.getButtons()));
+        }
+        bot.execute(fallback);
     }
 
     private void handleBrokenDiscoveryPhoto(MessageSend message, TelegramBot bot) {

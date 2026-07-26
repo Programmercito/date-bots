@@ -1,22 +1,26 @@
 package org.osbo.bots.jms.queue.receiver;
 
 import org.osbo.bots.jms.queue.pojos.MatchMessage;
+import org.osbo.bots.model.services.LikeMatchService;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Skeleton consumer for queue.match.
- * Real match notification will be implemented in a later phase.
+ * Consumes {@code queue.match} messages and delegates match notification to the
+ * {@link LikeMatchService}.
  */
-@Slf4j
 @Component
 public class ReceiverForMatch {
 
+    private final LikeMatchService likeMatchService;
+
+    public ReceiverForMatch(LikeMatchService likeMatchService) {
+        this.likeMatchService = likeMatchService;
+    }
+
     @JmsListener(destination = "queue.match", containerFactory = "myFactory")
     public void receiveMatch(MatchMessage message) {
-        log.info("Received match message: chatidA={}, chatidB={}", message.getChatidA(), message.getChatidB());
+        likeMatchService.notifyMatch(message);
     }
 
 }

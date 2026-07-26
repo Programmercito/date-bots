@@ -1,0 +1,82 @@
+schema: spec-driven
+project: date-bots
+
+context: |
+  Java 21 Spring Boot 3.4.4 Telegram bot for a Bolivian friendship/dating channel.
+  Spring Data JPA + SQLite (file-based, WAL), embedded ActiveMQ JMS broker.
+  java-telegram-bot-api 8.3.0 for Telegram, Lombok for boilerplate.
+  Maven build, JUnit 5 + Mockito inline tests.
+  Single-JVM, no external database server.
+
+conventions:
+  - English identifiers, comments, Javadoc.
+  - Spanish UI copy matching existing bot style.
+  - Business logic lives in services; ReceiverForProcess is a dispatcher.
+  - Persist users.comando after every interaction.
+  - All queue-facing and Telegram-facing work goes through JMS queues.
+  - Use Telegram file_id only; never store photos on disk.
+  - Keep SQLite transactions short; Hikari pool size 5.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes (JMS queue changes, schema changes, state-machine changes).
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Include sequence diagrams for complex flows (likes/matches, moderation, discovery).
+    - Document architecture decisions with rationale.
+  tasks:
+    - Group by phase, use hierarchical numbering.
+    - Keep tasks completable in one session.
+  apply:
+    tdd: true
+    test_command: "./mvnw test"
+    windows_test_command: ".\\mvnw test"
+  verify:
+    test_command: "./mvnw test"
+    windows_test_command: ".\\mvnw test"
+    build_command: "./mvnw package -DskipTests"
+    windows_build_command: ".\\mvnw package -DskipTests"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas (profile/status schema, queue contracts, UI copy).
+
+testing:
+  strict_tdd: true
+  test_command: "./mvnw test"
+  windows_test_command: ".\\mvnw test"
+  framework: JUnit 5
+  layers:
+    - name: Unit
+      available: true
+      tools: JUnit 5, Mockito inline 5.2.0
+    - name: Integration
+      available: true
+      tools: Spring Boot Test, @SpringBootTest
+    - name: E2E
+      available: false
+      tools: ~
+  coverage:
+    available: false
+    command: ~
+  quality:
+    - tool: Linter
+      available: false
+      command: ~
+    - tool: Type checker
+      available: true
+      command: Maven compile (javac)
+    - tool: Formatter
+      available: false
+      command: ~
+
+persistence:
+  artifact_store: openspec
+  engram_topic_key: sdd-init/date-bots
+
+risks:
+  - application.properties contains a real Telegram bot token and admin/channel IDs; do not store secrets in SDD artifacts.
+  - SQLite only allows one writer at a time; keep transactions short.
+  - No coverage tool configured; consider adding JaCoCo if the team wants coverage gates.
+  - No linter/formatter configured; code style relies on manual review.
