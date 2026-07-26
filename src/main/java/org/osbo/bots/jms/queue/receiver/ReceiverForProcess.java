@@ -11,6 +11,7 @@ import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
+import org.osbo.bots.model.services.ClubProfileEditService;
 import org.osbo.bots.model.services.ClubRegistrationService;
 import org.osbo.bots.model.services.LikeMatchService;
 import org.osbo.bots.model.services.MessageService;
@@ -28,6 +29,7 @@ public class ReceiverForProcess {
     ClubRegistrationService clubRegistrationService;
     ClubModerationService clubModerationService;
     ClubDiscoveryService clubDiscoveryService;
+    ClubProfileEditService clubProfileEditService;
     LikeMatchService likeMatchService;
 
     @Value("${telegram.horario.inicio}")
@@ -47,13 +49,15 @@ public class ReceiverForProcess {
 
     ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
             ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService,
-            ClubDiscoveryService clubDiscoveryService, LikeMatchService likeMatchService) {
+            ClubDiscoveryService clubDiscoveryService, ClubProfileEditService clubProfileEditService,
+            LikeMatchService likeMatchService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
         this.clubRegistrationService = clubRegistrationService;
         this.clubModerationService = clubModerationService;
         this.clubDiscoveryService = clubDiscoveryService;
+        this.clubProfileEditService = clubProfileEditService;
         this.likeMatchService = likeMatchService;
     }
 
@@ -81,6 +85,10 @@ public class ReceiverForProcess {
             return;
         }
         if (clubRegistrationService.handle(user, update)) {
+            userService.save(user);
+            return;
+        }
+        if (clubProfileEditService.handle(user, update)) {
             userService.save(user);
             return;
         }
@@ -129,8 +137,6 @@ public class ReceiverForProcess {
                         "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
             } else if ("/ver_canal".equals(update.getText())) {
                 sender.send(user.getChatid(), "Nuestro canal es: https://t.me/amistadbo");
-            } else if ("/editar_perfil".equals(update.getText())) {
-                sender.send(user.getChatid(), "Editar perfil estará disponible pronto.");
             } else if ("/pausar_perfil".equals(update.getText())) {
                 sender.send(user.getChatid(), "Pausar perfil estará disponible pronto.");
             } else if ("/activar_perfil".equals(update.getText())) {

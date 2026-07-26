@@ -16,6 +16,7 @@ import org.osbo.bots.model.entity.UserPlan;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
 import org.osbo.bots.util.AgeCalculator;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -37,12 +38,6 @@ public class ClubRegistrationService {
 
     public static final String CALLBACK_ORIENTATION_HETERO = "club_orientation_hetero";
     public static final String CALLBACK_ORIENTATION_BI = "club_orientation_bi";
-
-    public static final String CALLBACK_LOOKING_FOR_FRIENDSHIP = "club_looking_for_friendship";
-    public static final String CALLBACK_LOOKING_FOR_RELATIONSHIP = "club_looking_for_relationship";
-    public static final String CALLBACK_LOOKING_FOR_ONLINE_RELATIONSHIP = "club_looking_for_online_relationship";
-    public static final String CALLBACK_LOOKING_FOR_SUGAR_DADDY = "club_looking_for_sugar_daddy";
-    public static final String CALLBACK_LOOKING_FOR_LOVERS = "club_looking_for_lovers";
 
     public static final String CALLBACK_PREVIEW_OK = "club_preview_ok";
     public static final String CALLBACK_PREVIEW_EDIT = "club_preview_edit";
@@ -69,12 +64,6 @@ public class ClubRegistrationService {
 
     public static final String ORIENTATION_HETERO = "HETERO";
     public static final String ORIENTATION_BI = "BI";
-
-    public static final String LOOKING_FOR_FRIENDSHIP = "FRIENDSHIP";
-    public static final String LOOKING_FOR_RELATIONSHIP = "RELATIONSHIP";
-    public static final String LOOKING_FOR_ONLINE_RELATIONSHIP = "ONLINE_RELATIONSHIP";
-    public static final String LOOKING_FOR_SUGAR_DADDY = "SUGAR_DADDY";
-    public static final String LOOKING_FOR_LOVERS = "LOVERS";
 
     public static final String STATUS_INCOMPLETE = "INCOMPLETE";
     public static final String STATUS_PENDING = "PENDING";
@@ -418,13 +407,8 @@ public class ClubRegistrationService {
     }
 
     private void askForLookingFor(String chatid) {
-        List<List<Button>> buttons = Arrays.asList(
-                Arrays.asList(new Button("Amistad", CALLBACK_LOOKING_FOR_FRIENDSHIP),
-                        new Button("Relación", CALLBACK_LOOKING_FOR_RELATIONSHIP)),
-                Arrays.asList(new Button("Relación online", CALLBACK_LOOKING_FOR_ONLINE_RELATIONSHIP),
-                        new Button("Relación sugar daddy", CALLBACK_LOOKING_FOR_SUGAR_DADDY)),
-                Arrays.asList(new Button("Relación de enamorados", CALLBACK_LOOKING_FOR_LOVERS)));
-        sender.send(chatid, "¿Qué estás buscando en el club de amistad?", true, buttons);
+        sender.send(chatid, "¿Qué estás buscando en el club de amistad?", true,
+                LookingForOption.getButtonRows());
     }
 
     private void handleLookingFor(User user, MessageUpdate update) {
@@ -433,7 +417,7 @@ public class ClubRegistrationService {
             restart(user, update.getChatid());
             return;
         }
-        String lookingFor = mapLookingForCallback(update.getText());
+        String lookingFor = LookingForOption.fromCallback(update.getText());
         if (lookingFor == null) {
             askForLookingFor(update.getChatid());
             return;
@@ -659,28 +643,6 @@ public class ClubRegistrationService {
         };
     }
 
-    private String mapLookingForCallback(String callback) {
-        return switch (callback) {
-            case CALLBACK_LOOKING_FOR_FRIENDSHIP -> LOOKING_FOR_FRIENDSHIP;
-            case CALLBACK_LOOKING_FOR_RELATIONSHIP -> LOOKING_FOR_RELATIONSHIP;
-            case CALLBACK_LOOKING_FOR_ONLINE_RELATIONSHIP -> LOOKING_FOR_ONLINE_RELATIONSHIP;
-            case CALLBACK_LOOKING_FOR_SUGAR_DADDY -> LOOKING_FOR_SUGAR_DADDY;
-            case CALLBACK_LOOKING_FOR_LOVERS -> LOOKING_FOR_LOVERS;
-            default -> null;
-        };
-    }
-
-    private String translateLookingFor(String lookingFor) {
-        return switch (lookingFor) {
-            case LOOKING_FOR_FRIENDSHIP -> "Amistad";
-            case LOOKING_FOR_RELATIONSHIP -> "Relación";
-            case LOOKING_FOR_ONLINE_RELATIONSHIP -> "Relación online";
-            case LOOKING_FOR_SUGAR_DADDY -> "Relación sugar daddy";
-            case LOOKING_FOR_LOVERS -> "Relación de enamorados";
-            default -> lookingFor;
-        };
-    }
-
     private boolean isAllowedCombination(String gender, String orientation) {
         return (GENDER_MALE.equals(gender) && ORIENTATION_HETERO.equals(orientation))
                 || (GENDER_FEMALE.equals(gender) && ORIENTATION_HETERO.equals(orientation))
@@ -702,7 +664,7 @@ public class ClubRegistrationService {
         preview.append("Sobre vos: ").append(profile.getDescription()).append("\n");
         preview.append("Gustos: ").append(profile.getTastes()).append("\n");
         preview.append("Personalidad: ").append(profile.getTraits()).append("\n");
-        preview.append("Buscás: ").append(translateLookingFor(profile.getLookingFor())).append("\n");
+        preview.append("Buscás: ").append(LookingForOption.translate(profile.getLookingFor())).append("\n");
         if (profile.getContactUsername() != null && !profile.getContactUsername().isBlank()) {
             preview.append("Telegram: @").append(profile.getContactUsername()).append("\n");
         }

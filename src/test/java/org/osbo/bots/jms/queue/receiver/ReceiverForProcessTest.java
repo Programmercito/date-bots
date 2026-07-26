@@ -1,5 +1,6 @@
 package org.osbo.bots.jms.queue.receiver;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
+import org.osbo.bots.model.services.ClubProfileEditService;
 import org.osbo.bots.model.services.ClubRegistrationService;
 import org.osbo.bots.model.services.LikeMatchService;
 import org.osbo.bots.model.services.MessageService;
@@ -28,6 +30,7 @@ class ReceiverForProcessTest {
     private ClubRegistrationService clubRegistrationService;
     private ClubModerationService clubModerationService;
     private ClubDiscoveryService clubDiscoveryService;
+    private ClubProfileEditService clubProfileEditService;
     private LikeMatchService likeMatchService;
     private ReceiverForProcess receiver;
 
@@ -39,9 +42,10 @@ class ReceiverForProcessTest {
         clubRegistrationService = mock(ClubRegistrationService.class);
         clubModerationService = mock(ClubModerationService.class);
         clubDiscoveryService = mock(ClubDiscoveryService.class);
+        clubProfileEditService = mock(ClubProfileEditService.class);
         likeMatchService = mock(LikeMatchService.class);
         receiver = new ReceiverForProcess(sender, userService, messageService, clubRegistrationService,
-                clubModerationService, clubDiscoveryService, likeMatchService);
+                clubModerationService, clubDiscoveryService, clubProfileEditService, likeMatchService);
         ReflectionTestUtils.setField(receiver, "adminid", "admin-999");
     }
 
@@ -67,6 +71,20 @@ class ReceiverForProcessTest {
         receiver.sendMessage(update);
 
         verify(likeMatchService).reportMatch(CHATID, "target-456");
+    }
+
+    @Test
+    void shouldRouteEditProfileCommandToClubProfileEditService() {
+        User user = newUser("start");
+        MessageUpdate update = newUpdate("/editar_perfil");
+        when(userService.findById(CHATID)).thenReturn(user);
+        when(userService.save(user)).thenReturn(user);
+        when(clubRegistrationService.handle(user, update)).thenReturn(false);
+        when(clubProfileEditService.handle(user, update)).thenReturn(true);
+
+        receiver.sendMessage(update);
+
+        verify(clubProfileEditService).handle(user, update);
     }
 
     private User newUser(String comando) {

@@ -55,7 +55,7 @@ src/main/java/org/osbo/bots/
     services/                    # Business services
   processor/MessageProcessor.java # Receives Telegram webhook updates
   runner/StartupRunner.java      # Registers Telegram update listener
-  util/                          # Helpers (dates, sleep)
+  util/                          # Helpers (dates, sleep, looking-for options)
 ```
 
 ## 4. User Commands
@@ -71,7 +71,7 @@ src/main/java/org/osbo/bots/
 | `/ver_canal` | "📢 Ver canal" | All | Show channel link |
 | `/club` | "🤝 Entrar al club de amistad" | All | Enter the friendship club |
 | `/ver_personas` | "Ver personas" | Approved profiles | Start discovery |
-| `/editar_perfil` | "Editar perfil" | Approved/PENDING profiles | Edit profile (placeholder) |
+| `/editar_perfil` | "Editar perfil" | Approved profiles | Edit approved profile fields |
 | `/pausar_perfil` | "Pausar perfil" | Approved profiles | Hide from discovery (placeholder) |
 | `/activar_perfil` | "Activar perfil" | Paused profiles | Show in discovery (placeholder) |
 | `/mis_matches` | "Mis matches" | All | List current matches (placeholder) |
@@ -108,6 +108,21 @@ The bot stores the current state in `users.comando`. Always set and persist this
 - `club_register_looking_for`
 - `club_register_photo`
 - `club_register_preview`
+
+### Club profile edit states
+
+- `club_edit_menu`
+- `club_edit_name`
+- `club_edit_birthdate`
+- `club_edit_gender`
+- `club_edit_orientation`
+- `club_edit_city`
+- `club_edit_description`
+- `club_edit_tastes`
+- `club_edit_traits`
+- `club_edit_looking_for`
+- `club_edit_photo`
+- `club_edit_contact`
 
 ## 6. JMS Queues
 
@@ -157,8 +172,14 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 - "Amistad" → `FRIENDSHIP`
 - "Relación" → `RELATIONSHIP`
 - "Relación online" → `ONLINE_RELATIONSHIP`
-- "Relación sugar daddy" → `SUGAR_DADDY`
-- "Relación de enamorados" → `LOVERS`
+- "Algo casual" → `CASUAL`
+- "Sugar" → `SUGAR_DADDY`
+- "Relación seria" → `SERIOUS_RELATIONSHIP`
+- "Matrimonio" → `MARRIAGE`
+- "Novios" → `LOVERS`
+- "Relación informal" → `INFORMAL_RELATIONSHIP`
+
+Labels are translated from the stored code by `LookingForOption.translate(code)` so users never see raw values.
 
 **Broken/expired photo `file_id` handling:**
 
@@ -271,7 +292,7 @@ Already implemented:
 Still to implement:
 - Phase 5: Likes processing and mutual match detection (`queue.like`, `queue.match`).
 - Phase 6: Daily limits enforcement, reports handling, `/mis_matches`.
-- Phase 7: Edit/pause profile flows.
+- Phase 7: Pause/activate profile flows (edit is implemented; pause remains).
 - Future: payment integration.
 
 ## 15. Common Pitfalls

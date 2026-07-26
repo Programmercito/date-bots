@@ -19,6 +19,7 @@ import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.ReportRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.FechaActual;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -265,7 +266,7 @@ public class ClubDiscoveryService {
                 + "Sobre: " + profile.getDescription() + "\n"
                 + "Gustos: " + profile.getTastes() + "\n"
                 + "Personalidad: " + profile.getTraits() + "\n"
-                + "Buscando: " + profile.getLookingFor();
+                + "Buscando: " + LookingForOption.translate(profile.getLookingFor());
     }
 
     private List<List<Button>> buildProfileButtons(Profile profile) {

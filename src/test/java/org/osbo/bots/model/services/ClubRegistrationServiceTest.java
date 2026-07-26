@@ -23,6 +23,7 @@ import org.osbo.bots.model.entity.UserPlan;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
 import org.osbo.bots.util.AgeCalculator;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.jms.core.JmsTemplate;
 
 class ClubRegistrationServiceTest {
@@ -116,9 +117,9 @@ class ClubRegistrationServiceTest {
         service.handle(user, newUpdate("Honest, funny", USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
 
-        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_LOOKING_FOR_FRIENDSHIP, USERNAME));
+        service.handle(user, newUpdate(LookingForOption.CALLBACK_LOOKING_FOR_FRIENDSHIP, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PHOTO);
-        assertThat(profile.getLookingFor()).isEqualTo(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
+        assertThat(profile.getLookingFor()).isEqualTo(LookingForOption.LOOKING_FOR_FRIENDSHIP);
 
         MessageUpdate photoUpdate = newUpdate(null, USERNAME);
         photoUpdate.setMedias(new String[] { "photo-file-id" });
@@ -202,9 +203,9 @@ class ClubRegistrationServiceTest {
         Profile profile = newIncompleteProfile();
         when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
 
-        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_LOOKING_FOR_LOVERS, USERNAME));
+        service.handle(user, newUpdate(LookingForOption.CALLBACK_LOOKING_FOR_LOVERS, USERNAME));
 
-        assertThat(profile.getLookingFor()).isEqualTo(ClubRegistrationService.LOOKING_FOR_LOVERS);
+        assertThat(profile.getLookingFor()).isEqualTo(LookingForOption.LOOKING_FOR_LOVERS);
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PHOTO);
     }
 
@@ -325,7 +326,7 @@ class ClubRegistrationServiceTest {
         profile.setDescription("Friendly");
         profile.setTastes("Music");
         profile.setTraits("Honest");
-        profile.setLookingFor(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
+        profile.setLookingFor(LookingForOption.LOOKING_FOR_FRIENDSHIP);
         profile.setPhotoFileId("photo-id");
         return profile;
     }

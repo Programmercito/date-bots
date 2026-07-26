@@ -31,6 +31,7 @@ import org.osbo.bots.model.repositories.LikeRepository;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.ReportRepository;
 import org.osbo.bots.model.repositories.UserRepository;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.jms.core.JmsTemplate;
 
 class ClubDiscoveryServiceTest {
@@ -475,7 +476,7 @@ class ClubDiscoveryServiceTest {
         profile.setDescription("Friendly");
         profile.setTastes("Music");
         profile.setTraits("Funny");
-        profile.setLookingFor(ClubRegistrationService.LOOKING_FOR_FRIENDSHIP);
+        profile.setLookingFor(LookingForOption.LOOKING_FOR_FRIENDSHIP);
         profile.setPhotoFileId("photo-" + chatid);
         profile.setStatus(ClubDiscoveryService.STATUS_APPROVED);
         return profile;

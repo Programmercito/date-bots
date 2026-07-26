@@ -16,6 +16,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.LikeRepository;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -165,7 +166,7 @@ public class LikeMatchService {
         caption.append("Sobre: ").append(profile.getDescription()).append("\n");
         caption.append("Gustos: ").append(profile.getTastes()).append("\n");
         caption.append("Personalidad: ").append(profile.getTraits()).append("\n");
-        caption.append("Buscando: ").append(profile.getLookingFor());
+        caption.append("Buscando: ").append(LookingForOption.translate(profile.getLookingFor()));
         return caption.toString();
     }
 

@@ -10,6 +10,7 @@ import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.ModerationMessage;
 import org.osbo.bots.util.AgeCalculator;
+import org.osbo.bots.util.LookingForOption;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
@@ -70,7 +71,7 @@ public class ReceiverForModeration {
         appendField(caption, "Sobre", message.getDescription());
         appendField(caption, "Gustos", message.getTastes());
         appendField(caption, "Personalidad", message.getTraits());
-        appendField(caption, "Buscando", message.getLookingFor());
+        appendField(caption, "Buscando", LookingForOption.translate(message.getLookingFor()));
         appendField(caption, "Contacto", message.getContactUsername() == null ? null
                 : "@" + message.getContactUsername());
         return caption.toString();
