@@ -32,14 +32,25 @@ public class ClubRegistrationService {
 
     public static final String COMMAND_CLUB = "/club";
     public static final String CALLBACK_CLUB_ENTER = "club_register";
-
+    public static final String CALLBACK_CLUB_RETRY_MODERATION = "club_retry_moderation";
+    
     public static final String CALLBACK_GENDER_MALE = "club_gender_male";
     public static final String CALLBACK_GENDER_FEMALE = "club_gender_female";
     public static final String CALLBACK_GENDER_OTHER = "club_gender_other";
 
     public static final String CALLBACK_ORIENTATION_HETERO = "club_orientation_hetero";
     public static final String CALLBACK_ORIENTATION_BI = "club_orientation_bi";
-
+    public static final String CALLBACK_CITY_LA_PAZ = "club_city_la_paz";
+    public static final String CALLBACK_CITY_EL_ALTO = "club_city_el_alto";
+    public static final String CALLBACK_CITY_COCHABAMBA = "club_city_cochabamba";
+    public static final String CALLBACK_CITY_SANTA_CRUZ = "club_city_santa_cruz";
+    public static final String CALLBACK_CITY_ORURO = "club_city_oruro";
+    public static final String CALLBACK_CITY_SUCRE = "club_city_sucre";
+    public static final String CALLBACK_CITY_POTOSI = "club_city_potosi";
+    public static final String CALLBACK_CITY_TARIJA = "club_city_tarija";
+    public static final String CALLBACK_CITY_TRINIDAD = "club_city_trinidad";
+    public static final String CALLBACK_CITY_COBIJA = "club_city_cobija";
+    
     public static final String CALLBACK_PREVIEW_OK = "club_preview_ok";
     public static final String CALLBACK_PREVIEW_EDIT = "club_preview_edit";
 
@@ -106,6 +117,11 @@ public class ClubRegistrationService {
             return true;
         }
 
+        if (CALLBACK_CLUB_RETRY_MODERATION.equals(text)) {
+            handlePendingRetry(user, update);
+            return true;
+        }
+
         if (comando != null && comando.startsWith("club_register_")) {
             handleRegistrationState(user, update);
             return true;
@@ -129,8 +145,7 @@ public class ClubRegistrationService {
 
         switch (profile.getStatus()) {
             case STATUS_APPROVED -> sendApprovedStatus(update.getChatid(), profile);
-            case STATUS_PENDING -> sender.send(update.getChatid(),
-                    "Tu perfil está pendiente de aprobación. Te avisamos cuando sea aprobado.");
+            case STATUS_PENDING -> sendPendingStatus(update.getChatid());
             case STATUS_REJECTED -> {
                 if (CALLBACK_CLUB_ENTER.equals(update.getText())) {
                     profileRepository.delete(profile);
@@ -146,6 +161,30 @@ public class ClubRegistrationService {
             }
             default -> startRegistration(user, update);
         }
+    }
+
+    private void sendPendingStatus(String chatid) {
+        List<List<Button>> buttons = Arrays.asList(
+                Arrays.asList(new Button("🔁 Reintentar envío", CALLBACK_CLUB_RETRY_MODERATION),
+                        new Button("🏠 Volver al inicio", "/start")));
+        sender.sendMarkdown(chatid,
+                "⏳ *Tu perfil sigue pendiente de aprobación.*\n\nSi el mensaje no llegó al admin, podés reintentar enviarlo nuevamente.",
+                true, buttons);
+    }
+
+    private void handlePendingRetry(User user, MessageUpdate update) {
+        Profile profile = profileRepository.findByChatid(update.getChatid());
+        if (profile == null || !STATUS_PENDING.equals(profile.getStatus())) {
+            sender.send(update.getChatid(), "Tu perfil no está pendiente de revisión en este momento.");
+            return;
+        }
+        profile.setUpdatedAt(isoTimestamp());
+        profileRepository.save(profile);
+        sendModerationMessage(profile);
+        sender.send(update.getChatid(),
+                "Reenviamos tu perfil a revisión. Te avisamos cuando sea aprobado.",
+                true, List.of(List.of(new Button("Volver al inicio", "/start"))));
+        user.setComando("start");
     }
 
     private void startRegistration(User user, MessageUpdate update) {
