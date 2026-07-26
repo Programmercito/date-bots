@@ -87,6 +87,20 @@ class ClubProfileEditServiceTest {
     }
 
     @Test
+    void shouldStartEditMenuFromAnyStateForEditCommand() {
+        User user = newUser("club_browsing");
+        MessageUpdate update = newUpdate("/editar_perfil", USERNAME);
+        Profile profile = approvedProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        boolean handled = service.handle(user, update);
+
+        assertThat(handled).isTrue();
+        assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
+        verify(sender).sendPhoto(eq(CHATID), eq("photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
+    }
+
+    @Test
     void shouldEditName() {
         User user = newUser(ClubProfileEditService.STATE_EDIT_NAME);
         MessageUpdate update = newUpdate("Nuevo nombre", USERNAME);

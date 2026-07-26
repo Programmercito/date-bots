@@ -265,6 +265,7 @@ public class ReceiverForProcess {
                         new Button("📢 Ver canal", "/ver_canal"),
                         new Button("🤝 Entrar al club de amistad", "/club")),
                 Arrays.asList(new Button("👥 Ver personas", "/ver_personas"),
+                        new Button("✏️ Editar perfil", "/editar_perfil"),
                         new Button("💕 Mis matches", "/mis_matches")));
         sender.send(update.getChatid(),
                 "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",

@@ -94,7 +94,7 @@ public class ClubProfileEditService {
         String comando = user.getComando();
         String text = update.getText();
 
-        if ("start".equals(comando) && COMMAND_EDIT_PROFILE.equals(text)) {
+        if (COMMAND_EDIT_PROFILE.equals(text)) {
             startEdit(user, update);
             return true;
         }
