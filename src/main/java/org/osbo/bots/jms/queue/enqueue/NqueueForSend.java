@@ -188,4 +188,28 @@ public class NqueueForSend {
         message.setMessageId(messageId);
         jmsTemplate.convertAndSend("queue.send", message);
     }
+
+    /**
+     * Sends multiple photos as a Telegram media group (album).
+     * ReceiverForSend will save the resulting message IDs to the user's
+     * mediaGroupMessageIds field.
+     */
+    public void sendMediaGroup(@NonNull String chatid, @NonNull String[] photoFileIds,
+            String targetProfileChatid) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setTipo("media_group");
+        message.setMedias(photoFileIds);
+        message.setTargetProfileChatid(targetProfileChatid);
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
+    /**
+     * Sends the discovery action buttons (like/skip/report) as a standalone text
+     * message. ReceiverForSend saves its message ID as currentProfileMessageId.
+     */
+    public void sendDiscoveryButtons(@NonNull String chatid, @NonNull String text,
+            List<List<Button>> buttons, String targetProfileChatid) {
+        this.send(chatid, text, "discovery_buttons", null, null, false, buttons, targetProfileChatid, "Markdown");
+    }
 }

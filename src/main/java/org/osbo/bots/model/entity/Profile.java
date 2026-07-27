@@ -103,7 +103,7 @@ public class Profile {
             return new ArrayList<>(Arrays.asList(photoFileIds.split("\\|")));
         }
         if (photoFileId != null && !photoFileId.isBlank()) {
-            return List.of(photoFileId);
+            return new ArrayList<>(List.of(photoFileId));
         }
         return new ArrayList<>();
     }

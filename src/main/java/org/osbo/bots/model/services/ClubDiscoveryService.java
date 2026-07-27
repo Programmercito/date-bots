@@ -146,7 +146,9 @@ public class ClubDiscoveryService {
             if (STATE_NO_PROFILES.equals(user.getComando())) {
                 if (user.getCurrentProfileMessageId() != null) {
                     deleteCurrentProfileMessage(user);
+                    deleteMediaGroupMessages(user);
                     user.setCurrentProfileMessageId(null);
+                    user.setMediaGroupMessageIds(null);
                     sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
                 }
                 userRepository.save(user);
@@ -154,8 +156,10 @@ public class ClubDiscoveryService {
             }
             deletePreviousProfileMessage(user);
             deleteCurrentProfileMessage(user);
+            deleteMediaGroupMessages(user);
             user.setPreviousProfileMessageId(null);
             user.setCurrentProfileMessageId(null);
+            user.setMediaGroupMessageIds(null);
             sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
             user.setComando(STATE_NO_PROFILES);
             userRepository.save(user);
@@ -167,10 +171,18 @@ public class ClubDiscoveryService {
         List<List<Button>> buttons = buildProfileButtons(next);
         deletePreviousProfileMessage(user);
         deleteCurrentProfileMessage(user);
+        deleteMediaGroupMessages(user);
         user.setPreviousProfileMessageId(null);
         user.setCurrentProfileMessageId(null);
-        sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
-                buttons, next.getChatid(), "Markdown");
+        user.setMediaGroupMessageIds(null);
+        List<String> photos = next.getPhotoList();
+        if (photos.size() > 1) {
+            sender.sendMediaGroup(update.getChatid(), photos.toArray(new String[0]), next.getChatid());
+            sender.sendDiscoveryButtons(update.getChatid(), caption, buttons, next.getChatid());
+        } else {
+            sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
+                    buttons, next.getChatid(), "Markdown");
+        }
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
     }
@@ -332,6 +344,19 @@ public class ClubDiscoveryService {
     private void deleteCurrentProfileMessage(User user) {
         if (user.getCurrentProfileMessageId() != null) {
             sender.deleteMessage(user.getChatid(), user.getCurrentProfileMessageId());
+        }
+    }
+
+    private void deleteMediaGroupMessages(User user) {
+        String ids = user.getMediaGroupMessageIds();
+        if (ids == null || ids.isBlank()) {
+            return;
+        }
+        for (String idStr : ids.split("\\|")) {
+            try {
+                sender.deleteMessage(user.getChatid(), Integer.parseInt(idStr.trim()));
+            } catch (NumberFormatException ignored) {
+            }
         }
     }
 

@@ -513,17 +513,19 @@ public class ClubRegistrationService {
 
         int count = profile.photoCount();
         if (count >= MAX_PHOTOS) {
-            // Reached limit — move on automatically
+            sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅ — máximo alcanzado, continuamos.");
             user.setComando(STATE_REGISTER_CONTACT);
-            sender.send(update.getChatid(), "📸 " + count + " fotos guardadas \u2705 (máximo alcanzado).");
             askForContact(update.getChatid(), update.getUser(), profile);
             return;
         }
-        List<List<Button>> buttons = List.of(
-                List.of(new Button("✅ Listo (" + count + " foto" + (count > 1 ? "s" : "") + ")", CALLBACK_PHOTO_DONE)));
-        sender.send(update.getChatid(),
-                "📸 Foto " + count + " guardada. Podés enviar más (hasta " + MAX_PHOTOS + ") o tocar Listo.",
-                true, buttons);
+        sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅");
+        if (count == 1) {
+            List<List<Button>> buttons = List.of(
+                    List.of(new Button("✅ Listo, continuar", CALLBACK_PHOTO_DONE)));
+            sender.send(update.getChatid(),
+                    "Podés seguir enviando fotos (hasta " + MAX_PHOTOS + ") o tocar Listo cuando termines.",
+                    true, buttons);
+        }
     }
 
     private void handlePhotoDone(User user, MessageUpdate update) {

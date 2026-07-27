@@ -230,6 +230,9 @@ class ClubProfileEditServiceTest {
         MessageUpdate photoUpdate = newUpdate(null, USERNAME);
         photoUpdate.setMedias(new String[] { "new-photo-id" });
         Profile profile = approvedProfile();
+        // Clear existing photos so the first upload triggers the "Listo" button message
+        profile.setPhotoFileId(null);
+        profile.setPhotoFileIds(null);
         when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
         when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
