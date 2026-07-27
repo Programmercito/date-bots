@@ -150,17 +150,12 @@ public class ClubDiscoveryService {
         user.setComando(STATE_BROWSING);
         String caption = buildProfileCaption(next);
         List<List<Button>> buttons = buildProfileButtons(next);
-        if (CALLBACK_NEXT.equals(update.getText()) && user.getCurrentProfileMessageId() != null) {
-            sender.editPhotoCaptionMarkdown(update.getChatid(), user.getCurrentProfileMessageId(), next.getPhotoFileId(),
-                    caption, buttons, next.getChatid());
-        } else {
-            deletePreviousProfileMessage(user);
-            deleteCurrentProfileMessage(user);
-            user.setPreviousProfileMessageId(null);
-            user.setCurrentProfileMessageId(null);
-            sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
-                    buttons, next.getChatid(), "Markdown");
-        }
+        deletePreviousProfileMessage(user);
+        deleteCurrentProfileMessage(user);
+        user.setPreviousProfileMessageId(null);
+        user.setCurrentProfileMessageId(null);
+        sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
+                buttons, next.getChatid(), "Markdown");
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
     }

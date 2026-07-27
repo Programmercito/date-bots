@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +18,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.AnalyticsMessage;
 import org.osbo.bots.jms.queue.pojos.Button;
@@ -495,7 +497,7 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
-    void shouldReplaceCurrentProfileMessageWhenShowingNext() {
+    void shouldDeletePreviousDiscoveryMessagesBeforeShowingNext() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
         user.setCurrentProfileMessageId(200);
         user.setPreviousProfileMessageId(100);
@@ -514,11 +516,13 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        verify(sender).editPhotoCaptionMarkdown(eq(VIEWER_CHATID), eq(200), eq(target.getPhotoFileId()),
-                anyString(), any(List.class), eq(target.getChatid()));
-        verify(sender, never()).deleteMessage(anyString(), anyInt());
-        assertThat(user.getCurrentProfileMessageId()).isEqualTo(200);
-        assertThat(user.getPreviousProfileMessageId()).isEqualTo(100);
+        InOrder messages = inOrder(sender);
+        messages.verify(sender).deleteMessage(VIEWER_CHATID, 100);
+        messages.verify(sender).deleteMessage(VIEWER_CHATID, 200);
+        messages.verify(sender).send(eq(VIEWER_CHATID), anyString(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(target.getChatid()), eq("Markdown"));
+        assertThat(user.getCurrentProfileMessageId()).isNull();
+        assertThat(user.getPreviousProfileMessageId()).isNull();
     }
 
     @Test
