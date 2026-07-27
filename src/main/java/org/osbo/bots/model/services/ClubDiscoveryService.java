@@ -145,7 +145,9 @@ public class ClubDiscoveryService {
             String notice = noProfilesNotice();
             if (STATE_NO_PROFILES.equals(user.getComando())) {
                 if (user.getCurrentProfileMessageId() != null) {
-                    sender.editMessage(update.getChatid(), user.getCurrentProfileMessageId(), notice);
+                    deleteCurrentProfileMessage(user);
+                    user.setCurrentProfileMessageId(null);
+                    sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
                 }
                 userRepository.save(user);
                 return;

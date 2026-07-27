@@ -359,7 +359,7 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
-    void shouldEditExistingNoProfilesNoticeInsteadOfSendingAnother() {
+    void shouldReplaceExistingNoProfilesNoticeWithANewOne() {
         User user = newUser(ClubDiscoveryService.STATE_NO_PROFILES);
         user.setCurrentProfileMessageId(100);
         MessageUpdate update = newUpdate("/ver_personas", null);
@@ -373,10 +373,11 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        verify(sender).editMessage(eq(VIEWER_CHATID), eq(100), org.mockito.ArgumentMatchers.contains("Actualizado:"));
-        verify(sender, never()).send(eq(VIEWER_CHATID), anyString(), eq("discovery_empty"), eq((String) null),
-                eq((String) null), eq(false));
-        verify(sender, never()).deleteMessage(anyString(), anyInt());
+        InOrder messages = inOrder(sender);
+        messages.verify(sender).deleteMessage(VIEWER_CHATID, 100);
+        messages.verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.contains("Actualizado:"),
+                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false));
+        assertThat(user.getCurrentProfileMessageId()).isNull();
     }
 
     @Test
