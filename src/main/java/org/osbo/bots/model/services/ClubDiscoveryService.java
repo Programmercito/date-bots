@@ -2,6 +2,8 @@ package org.osbo.bots.model.services;
 
 import java.time.OffsetDateTime;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,6 +45,7 @@ public class ClubDiscoveryService {
     public static final String CALLBACK_REPORT_PREFIX = "club_report_";
 
     public static final String STATE_BROWSING = "club_browsing";
+    public static final String STATE_NO_PROFILES = "club_no_profiles";
     public static final String STATUS_APPROVED = "APPROVED";
     public static final String STATUS_BLOCKED = "bloqueado";
     public static final String COUNTRY_BOLIVIA = "BO";
@@ -61,6 +64,8 @@ public class ClubDiscoveryService {
     public static final String ORIENTATION_BI = "BI";
 
     private static final String SEND_TYPE_DISCOVERY_PROFILE = "discovery_profile";
+    private static final String SEND_TYPE_DISCOVERY_EMPTY = "discovery_empty";
+    private static final DateTimeFormatter NOTICE_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private final NqueueForSend sender;
     private final ProfileRepository profileRepository;
@@ -137,12 +142,20 @@ public class ClubDiscoveryService {
     public void showNextProfile(User user, MessageUpdate update) {
         Profile next = findNextProfile(user.getChatid());
         if (next == null) {
+            String notice = noProfilesNotice();
+            if (STATE_NO_PROFILES.equals(user.getComando())) {
+                if (user.getCurrentProfileMessageId() != null) {
+                    sender.editMessage(update.getChatid(), user.getCurrentProfileMessageId(), notice);
+                }
+                userRepository.save(user);
+                return;
+            }
             deletePreviousProfileMessage(user);
             deleteCurrentProfileMessage(user);
             user.setPreviousProfileMessageId(null);
             user.setCurrentProfileMessageId(null);
-            sender.send(update.getChatid(), "No hay más personas por ahora.");
-            user.setComando("start");
+            sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
+            user.setComando(STATE_NO_PROFILES);
             userRepository.save(user);
             return;
         }
@@ -402,6 +415,10 @@ public class ClubDiscoveryService {
 
     private String isoTimestamp() {
         return OffsetDateTime.now().toString();
+    }
+
+    private String noProfilesNotice() {
+        return "No hay más personas por ahora.\n\nActualizado: " + LocalTime.now().format(NOTICE_TIME_FORMAT);
     }
 
 }

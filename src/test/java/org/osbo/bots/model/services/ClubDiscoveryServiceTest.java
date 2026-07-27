@@ -282,8 +282,8 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        assertThat(user.getComando()).isEqualTo("start");
-        verify(sender).send(eq(VIEWER_CHATID), eq("No hay más personas por ahora."));
+        assertThat(user.getComando()).isEqualTo(ClubDiscoveryService.STATE_NO_PROFILES);
+        verifyEmptyDiscoveryNoticeIsSent();
     }
 
     @Test
@@ -304,8 +304,8 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        assertThat(user.getComando()).isEqualTo("start");
-        verify(sender).send(eq(VIEWER_CHATID), eq("No hay más personas por ahora."));
+        assertThat(user.getComando()).isEqualTo(ClubDiscoveryService.STATE_NO_PROFILES);
+        verifyEmptyDiscoveryNoticeIsSent();
     }
 
     @Test
@@ -331,7 +331,7 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        verify(sender).send(VIEWER_CHATID, "No hay más personas por ahora.");
+        verifyEmptyDiscoveryNoticeIsSent();
     }
 
     @Test
@@ -350,12 +350,51 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        assertThat(user.getComando()).isEqualTo("start");
+        assertThat(user.getComando()).isEqualTo(ClubDiscoveryService.STATE_NO_PROFILES);
         assertThat(user.getCurrentProfileMessageId()).isNull();
         assertThat(user.getPreviousProfileMessageId()).isNull();
         verify(sender).deleteMessage(VIEWER_CHATID, 99);
         verify(sender).deleteMessage(VIEWER_CHATID, 100);
-        verify(sender).send(VIEWER_CHATID, "No hay más personas por ahora.");
+        verifyEmptyDiscoveryNoticeIsSent();
+    }
+
+    @Test
+    void shouldEditExistingNoProfilesNoticeInsteadOfSendingAnother() {
+        User user = newUser(ClubDiscoveryService.STATE_NO_PROFILES);
+        user.setCurrentProfileMessageId(100);
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of());
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        verify(sender).editMessage(eq(VIEWER_CHATID), eq(100), org.mockito.ArgumentMatchers.contains("Actualizado:"));
+        verify(sender, never()).send(eq(VIEWER_CHATID), anyString(), eq("discovery_empty"), eq((String) null),
+                eq((String) null), eq(false));
+        verify(sender, never()).deleteMessage(anyString(), anyInt());
+    }
+
+    @Test
+    void shouldNotQueueAnotherNoProfilesNoticeWhileTheFirstIsPending() {
+        User user = newUser(ClubDiscoveryService.STATE_NO_PROFILES);
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of());
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        verify(sender, never()).send(eq(VIEWER_CHATID), anyString(), eq("discovery_empty"), eq((String) null),
+                eq((String) null), eq(false));
     }
 
     @Test
@@ -600,6 +639,11 @@ class ClubDiscoveryServiceTest {
         user.setChatid(chatid);
         user.setEstado("bloqueado");
         return user;
+    }
+
+    private void verifyEmptyDiscoveryNoticeIsSent() {
+        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.contains("Actualizado:"),
+                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false));
     }
 
 }
