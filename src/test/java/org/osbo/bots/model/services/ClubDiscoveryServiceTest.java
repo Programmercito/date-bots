@@ -319,11 +319,8 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         assertThat(user.getComando()).isEqualTo("start");
-        verify(sender).deleteMessage(VIEWER_CHATID, 99);
-        verify(sender).deleteMessage(VIEWER_CHATID, 100);
-        assertThat(user.getPreviousProfileMessageId()).isNull();
-        assertThat(user.getCurrentProfileMessageId()).isNull();
-        verify(sender).send(eq(VIEWER_CHATID), eq("No hay más personas por ahora."));
+        verify(sender).editCaption(VIEWER_CHATID, 100, "No hay más personas por ahora.", null);
+        verify(sender, never()).deleteMessage(anyString(), anyInt());
     }
 
     @Test
@@ -457,7 +454,7 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
-    void shouldDeletePreviousAndCurrentMessagesWhenShowingNext() {
+    void shouldReplaceCurrentProfileMessageWhenShowingNext() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
         user.setCurrentProfileMessageId(200);
         user.setPreviousProfileMessageId(100);
@@ -476,10 +473,11 @@ class ClubDiscoveryServiceTest {
 
         service.handle(user, update);
 
-        verify(sender).deleteMessage(VIEWER_CHATID, 100);
-        verify(sender).deleteMessage(VIEWER_CHATID, 200);
-        assertThat(user.getPreviousProfileMessageId()).isNull();
-        assertThat(user.getCurrentProfileMessageId()).isNull();
+        verify(sender).editPhotoCaptionMarkdown(eq(VIEWER_CHATID), eq(200), eq(target.getPhotoFileId()),
+                anyString(), any(List.class), eq(target.getChatid()));
+        verify(sender, never()).deleteMessage(anyString(), anyInt());
+        assertThat(user.getCurrentProfileMessageId()).isEqualTo(200);
+        assertThat(user.getPreviousProfileMessageId()).isEqualTo(100);
     }
 
     @Test

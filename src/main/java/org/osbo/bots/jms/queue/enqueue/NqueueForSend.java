@@ -151,6 +151,20 @@ public class NqueueForSend {
         this.editCaption(chatid, messageId, text, buttons, "Markdown");
     }
 
+    public void editPhotoCaptionMarkdown(@NonNull String chatid, @NonNull Integer messageId, @NonNull String photo,
+            @NonNull String caption, List<List<Button>> buttons, String targetProfileChatid) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setTipo("edit_photo_caption");
+        message.setMessageId(messageId);
+        message.setText(caption);
+        message.setMedias(new String[] { photo });
+        message.setButtons(buttons);
+        message.setTargetProfileChatid(targetProfileChatid);
+        message.setParseMode("Markdown");
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
     private void editCaption(@NonNull String chatid, @NonNull Integer messageId, @NonNull String text,
             List<List<Button>> buttons, String parseMode) {
         MessageSend message = new MessageSend();

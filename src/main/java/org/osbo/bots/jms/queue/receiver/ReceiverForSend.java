@@ -20,10 +20,12 @@ import org.springframework.stereotype.Component;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.InputMediaPhoto;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.AnswerCallbackQuery;
 import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.EditMessageCaption;
+import com.pengrad.telegrambot.request.EditMessageMedia;
 import com.pengrad.telegrambot.request.EditMessageText;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
@@ -93,6 +95,19 @@ public class ReceiverForSend {
                 edit.replyMarkup(markup);
             }
             bot.execute(edit);
+            return;
+        }
+
+        if ("edit_photo_caption".equals(message.getTipo())) {
+            InputMediaPhoto media = new InputMediaPhoto(message.getMedias()[0]).caption(message.getText());
+            applyParseMode(media, message.getParseMode());
+            EditMessageMedia edit = new EditMessageMedia(message.getChatid(), message.getMessageId(), media);
+            if (markup != null) {
+                edit.replyMarkup(markup);
+            }
+            if (!bot.execute(edit).isOk()) {
+                handleBrokenDiscoveryPhoto(message, bot);
+            }
             return;
         }
 
@@ -263,6 +278,13 @@ public class ReceiverForSend {
             return;
         }
         request.parseMode(ParseMode.valueOf(parseMode));
+    }
+
+    private void applyParseMode(InputMediaPhoto media, String parseMode) {
+        if (parseMode == null) {
+            return;
+        }
+        media.parseMode(ParseMode.valueOf(parseMode));
     }
 
     private InlineKeyboardMarkup buildMarkup(List<List<Button>> buttons) {
