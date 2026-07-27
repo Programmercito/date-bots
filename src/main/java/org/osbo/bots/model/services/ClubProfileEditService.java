@@ -557,26 +557,26 @@ public class ClubProfileEditService {
             }
             return;
         }
-        // First photo resets the collection; subsequent ones accumulate
-        if (profile.getPhotoFileIds() == null || profile.getPhotoFileIds().isBlank()) {
-            profile.resetPhotos(medias[0]);
-        } else {
-            profile.addPhoto(medias[0]);
-        }
+        // Always accumulate — never reset on re-entry
+        profile.addPhoto(medias[0]);
         profile.setUpdatedAt(OffsetDateTime.now().toString());
         profileRepository.save(profile);
 
         int count = profile.photoCount();
         if (count >= ClubRegistrationService.MAX_PHOTOS) {
+            sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅ — máximo alcanzado.");
             saveAndReturnToMenu(user, update, profile);
             return;
         }
-        List<List<Button>> buttons = new java.util.ArrayList<>();
-        buttons.add(List.of(new Button("✅ Listo (" + count + " foto" + (count > 1 ? "s" : "") + ")", CALLBACK_EDIT_PHOTO_DONE)));
-        buttons.add(cancelButtonRow());
-        sender.sendMarkdown(update.getChatid(),
-                "📸 Foto " + count + " guardada. Podés enviar más (hasta " + ClubRegistrationService.MAX_PHOTOS + ") o tocar Listo.",
-                true, buttons);
+        sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅");
+        if (count == 1) {
+            List<List<Button>> buttons = new java.util.ArrayList<>();
+            buttons.add(List.of(new Button("✅ Listo, guardar", CALLBACK_EDIT_PHOTO_DONE)));
+            buttons.add(cancelButtonRow());
+            sender.send(update.getChatid(),
+                    "Podés seguir enviando fotos (hasta " + ClubRegistrationService.MAX_PHOTOS + ") o tocar Listo.",
+                    true, buttons);
+        }
     }
 
     private void handlePhotoDone(User user, MessageUpdate update) {

@@ -45,4 +45,11 @@ public class User {
     @Column(name = "previous_profile_message_id")
     private Integer previousProfileMessageId;
 
+    /**
+     * Pipe-separated Telegram message IDs of the media group photos currently
+     * shown in discovery. Used to delete all photos when advancing to the next profile.
+     */
+    @Column(name = "media_group_message_ids")
+    private String mediaGroupMessageIds;
+
 }

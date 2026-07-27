@@ -27,8 +27,10 @@ import com.pengrad.telegrambot.request.DeleteMessage;
 import com.pengrad.telegrambot.request.EditMessageCaption;
 import com.pengrad.telegrambot.request.EditMessageMedia;
 import com.pengrad.telegrambot.request.EditMessageText;
+import com.pengrad.telegrambot.request.SendMediaGroup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendPhoto;
+import com.pengrad.telegrambot.response.MessagesResponse;
 import com.pengrad.telegrambot.response.SendResponse;
 
 @Component
@@ -116,6 +118,11 @@ public class ReceiverForSend {
             return;
         }
 
+        if ("media_group".equals(message.getTipo())) {
+            handleMediaGroup(message, bot);
+            return;
+        }
+
         SendResponse response;
         boolean hasPhoto = message.getMedias() != null && message.getMedias().length > 0
                 && message.getMedias()[0] != null && !message.getMedias()[0].isBlank();
@@ -197,7 +204,8 @@ public class ReceiverForSend {
                 }
 
                 messageservice.save(msg);
-            } else if ("discovery_profile".equals(message.getTipo()) || "discovery_empty".equals(message.getTipo())) {
+            } else if ("discovery_profile".equals(message.getTipo()) || "discovery_empty".equals(message.getTipo())
+                    || "discovery_buttons".equals(message.getTipo())) {
                 int id = response.message().messageId();
                 User user = userService.findById(message.getChatid());
                 if (user != null) {
@@ -212,6 +220,46 @@ public class ReceiverForSend {
                 handleBrokenDiscoveryPhoto(message, bot);
             } else {
                 sendFallbackTextMessage(message, bot, destinatario);
+            }
+        }
+    }
+
+    private void handleMediaGroup(MessageSend message, TelegramBot bot) {
+        String[] photoIds = message.getMedias();
+        if (photoIds == null || photoIds.length == 0) {
+            return;
+        }
+        InputMediaPhoto[] medias = new InputMediaPhoto[photoIds.length];
+        for (int i = 0; i < photoIds.length; i++) {
+            medias[i] = new InputMediaPhoto(photoIds[i]);
+        }
+        SendMediaGroup request = new SendMediaGroup(message.getChatid(), medias);
+        MessagesResponse response = bot.execute(request);
+        if (response.isOk() && response.messages() != null) {
+            StringBuilder ids = new StringBuilder();
+            for (com.pengrad.telegrambot.model.Message msg : response.messages()) {
+                if (ids.length() > 0) ids.append("|");
+                ids.append(msg.messageId());
+            }
+            User user = userService.findById(message.getChatid());
+            if (user != null) {
+                user.setMediaGroupMessageIds(ids.toString());
+                userService.save(user);
+            }
+        } else if (!response.isOk()) {
+            // Fall back: deactivate profile with broken photo
+            String targetChatid = message.getTargetProfileChatid();
+            if (targetChatid != null && !targetChatid.isBlank()) {
+                Profile profile = profileRepository.findByChatid(targetChatid);
+                if (profile != null) {
+                    profile.setStatus("REJECTED");
+                    profile.setUpdatedAt(OffsetDateTime.now().toString());
+                    profileRepository.save(profile);
+                    bot.execute(new SendMessage(targetChatid,
+                            "Tu foto de perfil no pudo enviarse. Tu perfil fue desactivado del club. Si querés volver, escribí /club."));
+                }
+                bot.execute(new SendMessage(message.getChatid(),
+                        "No se pudo mostrar un perfil. Continuá con /ver_personas."));
             }
         }
     }
