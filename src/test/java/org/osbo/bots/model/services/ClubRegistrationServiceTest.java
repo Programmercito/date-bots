@@ -105,7 +105,7 @@ class ClubRegistrationServiceTest {
         assertThat(profile.getGender()).isEqualTo(ClubRegistrationService.GENDER_MALE);
         assertThat(profile.getOrientation()).isEqualTo(ClubRegistrationService.ORIENTATION_HETERO);
 
-        service.handle(user, newUpdate("Santa Cruz", USERNAME));
+        service.handle(user, newUpdate(org.osbo.bots.util.CityOption.CALLBACK_CITY_SANTA_CRUZ, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_DESCRIPTION);
 
         service.handle(user, newUpdate("Friendly and outgoing", USERNAME));

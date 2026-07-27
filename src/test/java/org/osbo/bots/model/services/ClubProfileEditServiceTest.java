@@ -148,7 +148,7 @@ class ClubProfileEditServiceTest {
     @Test
     void shouldEditCity() {
         User user = newUser(ClubProfileEditService.STATE_EDIT_CITY);
-        MessageUpdate update = newUpdate("Cochabamba", USERNAME);
+        MessageUpdate update = newUpdate(org.osbo.bots.util.CityOption.CALLBACK_CITY_COCHABAMBA, USERNAME);
         Profile profile = approvedProfile();
         when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
         when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));

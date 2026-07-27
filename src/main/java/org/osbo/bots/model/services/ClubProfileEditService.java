@@ -14,6 +14,7 @@ import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.AgeCalculator;
+import org.osbo.bots.util.CityOption;
 import org.osbo.bots.util.LookingForOption;
 import org.osbo.bots.util.MarkdownEscaper;
 import org.springframework.stereotype.Component;
@@ -274,7 +275,12 @@ public class ClubProfileEditService {
             }
             case CALLBACK_EDIT_CITY -> {
                 user.setComando(STATE_EDIT_CITY);
-                sendFieldPrompt(update.getChatid(), "📍 Ciudad", "escribí tu ciudad", profile.getCity());
+                List<List<Button>> cityButtons = new java.util.ArrayList<>(CityOption.getButtonRows());
+                cityButtons.add(cancelButtonRow());
+                sender.sendMarkdown(update.getChatid(),
+                        "*📍 Ciudad*\nActual: " + MarkdownEscaper.escape(profile.getCity())
+                                + "\n\n¿En qué ciudad de Bolivia estás?",
+                        true, cityButtons);
             }
             case CALLBACK_EDIT_DESCRIPTION -> {
                 user.setComando(STATE_EDIT_DESCRIPTION);
@@ -451,11 +457,17 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
-        if (isEmptyText(update)) {
-            sendFieldPrompt(update.getChatid(), "📍 Ciudad", "escribí tu ciudad", profile.getCity());
+        String city = CityOption.fromCallback(update.getText());
+        if (city == null) {
+            List<List<Button>> cityButtons = new java.util.ArrayList<>(CityOption.getButtonRows());
+            cityButtons.add(cancelButtonRow());
+            sender.sendMarkdown(update.getChatid(),
+                    "*📍 Ciudad*\nActual: " + MarkdownEscaper.escape(profile.getCity())
+                            + "\n\n¿En qué ciudad de Bolivia estás?",
+                    true, cityButtons);
             return;
         }
-        profile.setCity(update.getText().trim());
+        profile.setCity(city);
         saveAndReturnToMenu(user, update, profile);
     }
 

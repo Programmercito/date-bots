@@ -16,6 +16,7 @@ import org.osbo.bots.model.entity.UserPlan;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserPlanRepository;
 import org.osbo.bots.util.AgeCalculator;
+import org.osbo.bots.util.CityOption;
 import org.osbo.bots.util.LookingForOption;
 import org.osbo.bots.util.MarkdownEscaper;
 import org.springframework.jms.core.JmsTemplate;
@@ -40,16 +41,7 @@ public class ClubRegistrationService {
 
     public static final String CALLBACK_ORIENTATION_HETERO = "club_orientation_hetero";
     public static final String CALLBACK_ORIENTATION_BI = "club_orientation_bi";
-    public static final String CALLBACK_CITY_LA_PAZ = "club_city_la_paz";
-    public static final String CALLBACK_CITY_EL_ALTO = "club_city_el_alto";
-    public static final String CALLBACK_CITY_COCHABAMBA = "club_city_cochabamba";
-    public static final String CALLBACK_CITY_SANTA_CRUZ = "club_city_santa_cruz";
-    public static final String CALLBACK_CITY_ORURO = "club_city_oruro";
-    public static final String CALLBACK_CITY_SUCRE = "club_city_sucre";
-    public static final String CALLBACK_CITY_POTOSI = "club_city_potosi";
-    public static final String CALLBACK_CITY_TARIJA = "club_city_tarija";
-    public static final String CALLBACK_CITY_TRINIDAD = "club_city_trinidad";
-    public static final String CALLBACK_CITY_COBIJA = "club_city_cobija";
+
     
     public static final String CALLBACK_PREVIEW_OK = "club_preview_ok";
     public static final String CALLBACK_PREVIEW_EDIT = "club_preview_edit";
@@ -368,7 +360,7 @@ public class ClubRegistrationService {
         }
 
         user.setComando(STATE_REGISTER_CITY);
-        sender.send(update.getChatid(), "¿En qué ciudad de Bolivia estás?");
+        askForCity(update.getChatid());
     }
 
     private void askForOrientation(String chatid) {
@@ -378,9 +370,14 @@ public class ClubRegistrationService {
         sender.send(chatid, "Seleccioná una opción de orientación:", true, buttons);
     }
 
+    private void askForCity(String chatid) {
+        sender.send(chatid, "¿En qué ciudad de Bolivia estás?", true, CityOption.getButtonRows());
+    }
+
     private void handleCity(User user, MessageUpdate update) {
-        if (isEmptyText(update)) {
-            sender.send(update.getChatid(), "Por favor, escribí tu ciudad.");
+        String city = CityOption.fromCallback(update.getText());
+        if (city == null) {
+            askForCity(update.getChatid());
             return;
         }
         Profile profile = requireIncompleteProfile(update.getChatid());
@@ -388,7 +385,7 @@ public class ClubRegistrationService {
             restart(user, update.getChatid());
             return;
         }
-        profile.setCity(update.getText().trim());
+        profile.setCity(city);
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
 
