@@ -398,6 +398,18 @@ class ClubDiscoveryServiceTest {
                 eq((String) null), eq(false));
     }
 
+    private void mockNextProfileAvailable() {
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile nextProfile = approvedProfile("next_user");
+        nextProfile.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(nextProfile));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(skippedProfileRepository.findByFromChatidAndExpiresAtMsAfter(anyString(), org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
+        when(userRepository.findById("next_user")).thenReturn(java.util.Optional.of(newUser(ClubDiscoveryService.STATE_BROWSING)));
+    }
+
     @Test
     void shouldHandleLikeCallback() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
@@ -409,6 +421,7 @@ class ClubDiscoveryServiceTest {
 
         when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mockNextProfileAvailable();
 
         service.handle(user, update);
 
@@ -430,6 +443,7 @@ class ClubDiscoveryServiceTest {
         when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
         when(skippedProfileRepository.findByFromChatidAndToChatid(VIEWER_CHATID, TARGET_CHATID)).thenReturn(null);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mockNextProfileAvailable();
 
         service.handle(user, update);
 
@@ -447,6 +461,27 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
+    void shouldHandleSkipCallbackWhenNoMoreProfiles() {
+        User user = newUser(ClubDiscoveryService.STATE_BROWSING);
+        user.setCurrentProfileMessageId(201);
+        MessageUpdate update = newUpdate("club_skip_" + TARGET_CHATID, null);
+        update.setMessageId(201);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setName("Laura");
+
+        when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
+        when(skippedProfileRepository.findByFromChatidAndToChatid(VIEWER_CHATID, TARGET_CHATID)).thenReturn(null);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // We do NOT call mockNextProfileAvailable, so findNextProfile will return null
+
+        service.handle(user, update);
+
+        assertThat(user.getCurrentProfileMessageId()).isNull();
+        verify(sender, never()).editCaption(anyString(), anyInt(), anyString(), org.mockito.ArgumentMatchers.anyList());
+        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("Skippeaste a Laura 👋\n\nNo hay más personas"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false));
+    }
+
+    @Test
     void shouldHandleReportCallback() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
         user.setCurrentProfileMessageId(202);
@@ -458,6 +493,7 @@ class ClubDiscoveryServiceTest {
         when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
         when(reportRepository.save(any(Report.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mockNextProfileAvailable();
 
         service.handle(user, update);
 
