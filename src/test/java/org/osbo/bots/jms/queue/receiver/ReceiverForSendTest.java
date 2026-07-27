@@ -110,6 +110,30 @@ class ReceiverForSendTest {
     }
 
     @Test
+    void shouldUpdateCurrentProfileMessageIdOnSuccessfulEmptyDiscoveryNotice() {
+        User viewer = new User();
+        viewer.setChatid(VIEWER_CHATID);
+        when(userService.findById(VIEWER_CHATID)).thenReturn(viewer);
+
+        SendResponse okResponse = mock(SendResponse.class);
+        when(okResponse.isOk()).thenReturn(true);
+        com.pengrad.telegrambot.model.Message sentMessage = mock(com.pengrad.telegrambot.model.Message.class);
+        when(sentMessage.messageId()).thenReturn(43);
+        when(okResponse.message()).thenReturn(sentMessage);
+        when(bot.execute(any(SendMessage.class))).thenReturn(okResponse);
+
+        MessageSend message = new MessageSend();
+        message.setChatid(VIEWER_CHATID);
+        message.setTipo("discovery_empty");
+        message.setText("No hay más personas por ahora.\n\nActualizado: 23:00:00");
+
+        receiver.sendMessage(message);
+
+        assertThat(viewer.getCurrentProfileMessageId()).isEqualTo(43);
+        verify(userService).save(viewer);
+    }
+
+    @Test
     void shouldFallBackToTextWhenMatchNotificationPhotoFails() {
         SendResponse failedResponse = mock(SendResponse.class);
         when(failedResponse.isOk()).thenReturn(false);

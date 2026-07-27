@@ -197,7 +197,7 @@ public class ReceiverForSend {
                 }
 
                 messageservice.save(msg);
-            } else if ("discovery_profile".equals(message.getTipo())) {
+            } else if ("discovery_profile".equals(message.getTipo()) || "discovery_empty".equals(message.getTipo())) {
                 int id = response.message().messageId();
                 User user = userService.findById(message.getChatid());
                 if (user != null) {
