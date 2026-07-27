@@ -201,11 +201,14 @@ public class ClubDiscoveryService {
 
         trackCurrentMessageId(user, update);
         String confirmation = "Le diste like a " + name + " ❤️";
-        List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
-        sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
-
+        
         sendLikeMessage(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_LIKE, 1);
+        
+        // Let the async like process start, but sleep a tiny bit to give it a chance to save before we check next
+        try { Thread.sleep(50); } catch (Exception ignored) {}
+        
+        confirmAndCheckNext(user, update, confirmation);
         userRepository.save(user);
     }
 
@@ -222,11 +225,11 @@ public class ClubDiscoveryService {
 
         trackCurrentMessageId(user, update);
         String confirmation = "Skippeaste a " + name + " 👋";
-        List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
-        sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
-
+        
         saveSkip(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
+        
+        confirmAndCheckNext(user, update, confirmation);
         userRepository.save(user);
     }
 
@@ -246,10 +249,28 @@ public class ClubDiscoveryService {
         notifyAdminAboutReport(profile);
 
         String confirmation = "Perfil reportado. Los administradores lo revisarán.";
-        List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
-        sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
-
+        
+        confirmAndCheckNext(user, update, confirmation);
         userRepository.save(user);
+    }
+
+    private void confirmAndCheckNext(User user, MessageUpdate update, String confirmation) {
+        Profile next = findNextProfile(user.getChatid());
+        if (next == null) {
+            deletePreviousProfileMessage(user);
+            deleteCurrentProfileMessage(user);
+            deleteMediaGroupMessages(user);
+            user.setPreviousProfileMessageId(null);
+            user.setCurrentProfileMessageId(null);
+            user.setMediaGroupMessageIds(null);
+
+            String notice = confirmation + "\n\n" + noProfilesNotice();
+            sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
+            user.setComando(STATE_NO_PROFILES);
+        } else {
+            List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
+            sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
+        }
     }
 
     private Profile findNextProfile(String currentChatid) {
