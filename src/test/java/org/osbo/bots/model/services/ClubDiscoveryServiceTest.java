@@ -401,6 +401,7 @@ class ClubDiscoveryServiceTest {
     private void mockNextProfileAvailable() {
         Profile viewer = approvedProfile(VIEWER_CHATID);
         Profile nextProfile = approvedProfile("next_user");
+        nextProfile.setGender(ClubDiscoveryService.GENDER_FEMALE);
         when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
         when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
                 ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(nextProfile));
