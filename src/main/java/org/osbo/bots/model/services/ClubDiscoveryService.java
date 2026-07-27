@@ -264,7 +264,7 @@ public class ClubDiscoveryService {
                 .map(Like::getToChatid)
                 .toList();
         List<String> activeSkips = skippedProfileRepository
-                .findByFromChatidAndExpiresAtAfter(currentChatid, Instant.now().toString())
+                .findByFromChatidAndExpiresAtMsAfter(currentChatid, Instant.now().toEpochMilli())
                 .stream()
                 .map(SkippedProfile::getToChatid)
                 .toList();
@@ -401,7 +401,7 @@ public class ClubDiscoveryService {
             skippedProfile.setFromChatid(fromChatid);
             skippedProfile.setToChatid(toChatid);
         }
-        skippedProfile.setExpiresAt(Instant.now().plusSeconds(SKIP_COOLDOWN_DAYS * 24L * 60L * 60L).toString());
+        skippedProfile.setExpiresAtMs(Instant.now().plusSeconds(SKIP_COOLDOWN_DAYS * 24L * 60L * 60L).toEpochMilli());
         skippedProfileRepository.save(skippedProfile);
     }
 

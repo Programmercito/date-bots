@@ -27,7 +27,7 @@ public class SkippedProfile {
     @Column(name = "to_chatid", nullable = false)
     private String toChatid;
 
-    @Column(name = "expires_at", nullable = false)
-    private String expiresAt;
+    @Column(name = "expires_at_ms", nullable = false)
+    private Long expiresAtMs;
 
 }
