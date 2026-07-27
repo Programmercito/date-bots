@@ -26,10 +26,12 @@ import org.osbo.bots.jms.queue.pojos.ModerationMessage;
 import org.osbo.bots.model.entity.Like;
 import org.osbo.bots.model.entity.Profile;
 import org.osbo.bots.model.entity.Report;
+import org.osbo.bots.model.entity.SkippedProfile;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.LikeRepository;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.ReportRepository;
+import org.osbo.bots.model.repositories.SkippedProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.LookingForOption;
 import org.springframework.jms.core.JmsTemplate;
@@ -44,6 +46,7 @@ class ClubDiscoveryServiceTest {
     private UserRepository userRepository;
     private LikeRepository likeRepository;
     private ReportRepository reportRepository;
+    private SkippedProfileRepository skippedProfileRepository;
     private JmsTemplate jmsTemplate;
     private ClubDiscoveryService service;
 
@@ -54,9 +57,10 @@ class ClubDiscoveryServiceTest {
         userRepository = mock(UserRepository.class);
         likeRepository = mock(LikeRepository.class);
         reportRepository = mock(ReportRepository.class);
+        skippedProfileRepository = mock(SkippedProfileRepository.class);
         jmsTemplate = mock(JmsTemplate.class);
         service = new ClubDiscoveryService(sender, profileRepository, userRepository, likeRepository,
-                reportRepository, jmsTemplate);
+                reportRepository, skippedProfileRepository, jmsTemplate);
     }
 
     @Test
@@ -303,6 +307,32 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
+    void shouldExcludeProfilesSkippedDuringCooldown() {
+        User user = newUser("start");
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        target.setOrientation(ClubDiscoveryService.ORIENTATION_HETERO);
+        SkippedProfile activeSkip = new SkippedProfile();
+        activeSkip.setFromChatid(VIEWER_CHATID);
+        activeSkip.setToChatid(TARGET_CHATID);
+        activeSkip.setExpiresAt(java.time.OffsetDateTime.now().plusDays(1).toString());
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(skippedProfileRepository.findByFromChatidAndExpiresAtAfter(eq(VIEWER_CHATID), anyString()))
+                .thenReturn(List.of(activeSkip));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        verify(sender).send(VIEWER_CHATID, "No hay más personas por ahora.");
+    }
+
+    @Test
     void shouldHandleNoMoreProfiles() {
         User user = newUser(ClubDiscoveryService.STATE_BROWSING);
         MessageUpdate update = newUpdate("club_next", null);
@@ -356,12 +386,20 @@ class ClubDiscoveryServiceTest {
         target.setName("Laura");
 
         when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
+        when(skippedProfileRepository.findByFromChatidAndToChatid(VIEWER_CHATID, TARGET_CHATID)).thenReturn(null);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.handle(user, update);
 
         assertThat(user.getCurrentProfileMessageId()).isEqualTo(201);
         verify(sender).editCaption(eq(VIEWER_CHATID), eq(201), eq("Skippeaste a Laura 👋"), any(List.class));
+        ArgumentCaptor<SkippedProfile> skippedProfileCaptor = ArgumentCaptor.forClass(SkippedProfile.class);
+        verify(skippedProfileRepository).save(skippedProfileCaptor.capture());
+        assertThat(skippedProfileCaptor.getValue().getFromChatid()).isEqualTo(VIEWER_CHATID);
+        assertThat(skippedProfileCaptor.getValue().getToChatid()).isEqualTo(TARGET_CHATID);
+        assertThat(java.time.Instant.parse(skippedProfileCaptor.getValue().getExpiresAt()))
+                .isBetween(java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L - 60),
+                        java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L + 60));
         verify(jmsTemplate).convertAndSend(eq("queue.analytics"), any(AnalyticsMessage.class));
         verify(jmsTemplate, never()).convertAndSend(eq("queue.like"), any(LikeMessage.class));
     }

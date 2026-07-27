@@ -1,6 +1,7 @@
 package org.osbo.bots.model.services;
 
 import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,10 +14,12 @@ import org.osbo.bots.jms.queue.pojos.ModerationMessage;
 import org.osbo.bots.model.entity.Like;
 import org.osbo.bots.model.entity.Profile;
 import org.osbo.bots.model.entity.Report;
+import org.osbo.bots.model.entity.SkippedProfile;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.LikeRepository;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.ReportRepository;
+import org.osbo.bots.model.repositories.SkippedProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.LookingForOption;
@@ -46,6 +49,7 @@ public class ClubDiscoveryService {
 
     public static final String EVENT_LIKE = "LIKE";
     public static final String EVENT_VIEW = "VIEW";
+    public static final int SKIP_COOLDOWN_DAYS = 10;
 
     public static final String REPORT_STATUS_OPEN = "OPEN";
     public static final String REPORT_REASON_PROFILE = "Perfil reportado desde descubrimiento";
@@ -63,16 +67,18 @@ public class ClubDiscoveryService {
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
     private final ReportRepository reportRepository;
+    private final SkippedProfileRepository skippedProfileRepository;
     private final JmsTemplate jmsTemplate;
 
     public ClubDiscoveryService(NqueueForSend sender, ProfileRepository profileRepository,
             UserRepository userRepository, LikeRepository likeRepository,
-            ReportRepository reportRepository, JmsTemplate jmsTemplate) {
+            ReportRepository reportRepository, SkippedProfileRepository skippedProfileRepository, JmsTemplate jmsTemplate) {
         this.sender = sender;
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
         this.reportRepository = reportRepository;
+        this.skippedProfileRepository = skippedProfileRepository;
         this.jmsTemplate = jmsTemplate;
     }
 
@@ -197,6 +203,7 @@ public class ClubDiscoveryService {
         List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
         sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
 
+        saveSkip(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
     }
@@ -234,12 +241,18 @@ public class ClubDiscoveryService {
         List<String> alreadyLiked = likeRepository.findByFromChatid(currentChatid).stream()
                 .map(Like::getToChatid)
                 .toList();
+        List<String> activeSkips = skippedProfileRepository
+                .findByFromChatidAndExpiresAtAfter(currentChatid, Instant.now().toString())
+                .stream()
+                .map(SkippedProfile::getToChatid)
+                .toList();
 
         return approved.stream()
                 .filter(p -> !p.getChatid().equals(currentChatid))
                 .filter(p -> matchesFilters(currentProfile, p))
                 .filter(p -> matchesCity(currentProfile, p))
                 .filter(p -> !alreadyLiked.contains(p.getChatid()))
+                .filter(p -> !activeSkips.contains(p.getChatid()))
                 .filter(p -> isActiveUser(p.getChatid()))
                 .findFirst()
                 .orElse(null);
@@ -341,6 +354,17 @@ public class ClubDiscoveryService {
         report.setStatus(REPORT_STATUS_OPEN);
         report.setCreatedAt(isoTimestamp());
         reportRepository.save(report);
+    }
+
+    private void saveSkip(String fromChatid, String toChatid) {
+        SkippedProfile skippedProfile = skippedProfileRepository.findByFromChatidAndToChatid(fromChatid, toChatid);
+        if (skippedProfile == null) {
+            skippedProfile = new SkippedProfile();
+            skippedProfile.setFromChatid(fromChatid);
+            skippedProfile.setToChatid(toChatid);
+        }
+        skippedProfile.setExpiresAt(Instant.now().plusSeconds(SKIP_COOLDOWN_DAYS * 24L * 60L * 60L).toString());
+        skippedProfileRepository.save(skippedProfile);
     }
 
     private void notifyAdminAboutReport(Profile reportedProfile) {
