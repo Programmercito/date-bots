@@ -94,6 +94,10 @@ public class NqueueForSend {
         this.send(chatid, text, "text", null, null, false, buttons, null, "Markdown");
     }
 
+    public void sendMarkdown(@NonNull String chatid, @NonNull String text) {
+        this.send(chatid, text, "text", null, null, false, null, null, "Markdown");
+    }
+
     public void sendMarkdown(@NonNull String chatid, @NonNull String text, boolean disableNotification,
             List<List<Button>> buttons) {
         this.send(chatid, text, "text", null, null, disableNotification, buttons, null, "Markdown");
