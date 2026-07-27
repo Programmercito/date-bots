@@ -30,4 +30,8 @@ public class SkippedProfile {
     @Column(name = "expires_at_ms", nullable = false)
     private Long expiresAtMs;
 
+    // Legacy column to satisfy SQLite NOT NULL constraint on existing databases
+    @Column(name = "expires_at", nullable = false)
+    private String expiresAt = "0";
+
 }
