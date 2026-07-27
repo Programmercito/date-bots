@@ -405,7 +405,7 @@ class ClubDiscoveryServiceTest {
         when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
                 ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(nextProfile));
         when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
-        when(skippedProfileRepository.findByFromChatidAndExpiresAtMsAfter(anyString(), anyLong())).thenReturn(List.of());
+        when(skippedProfileRepository.findByFromChatidAndExpiresAtMsAfter(anyString(), org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
         when(userRepository.findById("next_user")).thenReturn(java.util.Optional.of(newUser(ClubDiscoveryService.STATE_BROWSING)));
     }
 
@@ -476,7 +476,7 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         assertThat(user.getCurrentProfileMessageId()).isNull();
-        verify(sender, never()).editCaption(anyString(), anyInt(), anyString(), anyList());
+        verify(sender, never()).editCaption(anyString(), anyInt(), anyString(), org.mockito.ArgumentMatchers.anyList());
         verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("Skippeaste a Laura 👋\n\nNo hay más personas"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false));
     }
 
