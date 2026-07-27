@@ -319,8 +319,11 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         assertThat(user.getComando()).isEqualTo("start");
-        verify(sender).editCaption(VIEWER_CHATID, 100, "No hay más personas por ahora.", null);
-        verify(sender, never()).deleteMessage(anyString(), anyInt());
+        assertThat(user.getCurrentProfileMessageId()).isNull();
+        assertThat(user.getPreviousProfileMessageId()).isNull();
+        verify(sender).deleteMessage(VIEWER_CHATID, 99);
+        verify(sender).deleteMessage(VIEWER_CHATID, 100);
+        verify(sender).send(VIEWER_CHATID, "No hay más personas por ahora.");
     }
 
     @Test

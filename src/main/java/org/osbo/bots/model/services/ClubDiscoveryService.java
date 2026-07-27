@@ -131,16 +131,11 @@ public class ClubDiscoveryService {
     public void showNextProfile(User user, MessageUpdate update) {
         Profile next = findNextProfile(user.getChatid());
         if (next == null) {
-            if (CALLBACK_NEXT.equals(update.getText()) && user.getCurrentProfileMessageId() != null) {
-                sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), "No hay más personas por ahora.",
-                        null);
-            } else {
-                deletePreviousProfileMessage(user);
-                deleteCurrentProfileMessage(user);
-                user.setPreviousProfileMessageId(null);
-                user.setCurrentProfileMessageId(null);
-                sender.send(update.getChatid(), "No hay más personas por ahora.");
-            }
+            deletePreviousProfileMessage(user);
+            deleteCurrentProfileMessage(user);
+            user.setPreviousProfileMessageId(null);
+            user.setCurrentProfileMessageId(null);
+            sender.send(update.getChatid(), "No hay más personas por ahora.");
             user.setComando("start");
             userRepository.save(user);
             return;
