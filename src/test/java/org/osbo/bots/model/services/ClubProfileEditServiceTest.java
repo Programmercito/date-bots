@@ -227,15 +227,20 @@ class ClubProfileEditServiceTest {
     @Test
     void shouldEditPhoto() {
         User user = newUser(ClubProfileEditService.STATE_EDIT_PHOTO);
-        MessageUpdate update = newUpdate(null, USERNAME);
-        update.setMedias(new String[] { "new-photo-id" });
+        MessageUpdate photoUpdate = newUpdate(null, USERNAME);
+        photoUpdate.setMedias(new String[] { "new-photo-id" });
         Profile profile = approvedProfile();
         when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
         when(profileRepository.save(any(Profile.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.handle(user, update);
+        service.handle(user, photoUpdate);
 
         assertThat(profile.getPhotoFileId()).isEqualTo("new-photo-id");
+        assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_PHOTO);
+
+        // Tap "Listo" to save and return to menu
+        service.handle(user, newUpdate(ClubProfileEditService.CALLBACK_EDIT_PHOTO_DONE, USERNAME));
+
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
         verify(sender).sendPhoto(eq(CHATID), eq("new-photo-id"), anyString(), eq(true), any(List.class), eq("Markdown"));
     }

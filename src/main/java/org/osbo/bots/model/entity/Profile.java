@@ -1,6 +1,9 @@
 package org.osbo.bots.model.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -55,6 +58,13 @@ public class Profile {
     @Column(name = "photo_file_id")
     private String photoFileId;
 
+    /**
+     * Pipe-separated list of all photo file IDs (up to 10).
+     * The first entry matches {@link #photoFileId}.
+     */
+    @Column(name = "photo_file_ids")
+    private String photoFileIds;
+
     @Column(name = "contact_username")
     private String contactUsername;
 
@@ -82,6 +92,52 @@ public class Profile {
      */
     public Integer getAge() {
         return AgeCalculator.calculateAge(birthDate, age);
+    }
+
+    /**
+     * Returns all photo file IDs as a list. Falls back to {@link #photoFileId}
+     * if {@link #photoFileIds} is not set (backward compat).
+     */
+    public List<String> getPhotoList() {
+        if (photoFileIds != null && !photoFileIds.isBlank()) {
+            return new ArrayList<>(Arrays.asList(photoFileIds.split("\\|")));
+        }
+        if (photoFileId != null && !photoFileId.isBlank()) {
+            return List.of(photoFileId);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Adds a photo file ID. Keeps {@link #photoFileId} in sync as the primary photo.
+     * Maximum 10 photos.
+     *
+     * @return true if added, false if limit reached or already present
+     */
+    public boolean addPhoto(String fileId) {
+        List<String> list = getPhotoList();
+        if (list.size() >= 10 || list.contains(fileId)) {
+            return false;
+        }
+        list.add(fileId);
+        photoFileIds = String.join("|", list);
+        photoFileId = list.get(0);
+        return true;
+    }
+
+    /**
+     * Replaces all photos with a fresh list starting with the given file ID.
+     */
+    public void resetPhotos(String firstFileId) {
+        photoFileId = firstFileId;
+        photoFileIds = firstFileId;
+    }
+
+    /**
+     * Returns how many photos this profile has.
+     */
+    public int photoCount() {
+        return getPhotoList().size();
     }
 
 }

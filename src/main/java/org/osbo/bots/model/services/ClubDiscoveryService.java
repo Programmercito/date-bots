@@ -303,10 +303,13 @@ public class ClubDiscoveryService {
     }
 
     private String buildProfileCaption(Profile profile) {
+        int photoCount = profile.photoCount();
+        String photoLine = photoCount > 1 ? "📸 " + photoCount + " fotos\n" : "";
         return "*" + MarkdownEscaper.escape(profile.getName()) + "*, " + profile.getAge() + " años\n"
                 + translateGender(profile.getGender()) + " · " + translateOrientation(profile.getOrientation()) + "\n"
-                + "📍 " + MarkdownEscaper.escape(profile.getCity()) + "\n\n"
-                + "*📝 Sobre:* " + MarkdownEscaper.escape(profile.getDescription()) + "\n"
+                + "📍 " + MarkdownEscaper.escape(profile.getCity()) + "\n"
+                + photoLine
+                + "\n*📝 Sobre:* " + MarkdownEscaper.escape(profile.getDescription()) + "\n"
                 + "*🎸 Gustos:* " + MarkdownEscaper.escape(profile.getTastes()) + "\n"
                 + "*🧠 Personalidad:* " + MarkdownEscaper.escape(profile.getTraits()) + "\n"
                 + "*💘 Buscando:* " + LookingForOption.translate(profile.getLookingFor());
