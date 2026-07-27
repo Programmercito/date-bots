@@ -198,8 +198,12 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_NAME);
-        sender.send(update.getChatid(),
-                "Para unirte al club de amistad, completá tu perfil. Primero, ¿cómo querés que te llamemos?");
+        sender.sendMarkdown(update.getChatid(),
+                "🤝 *Bienvenid@ al Club de Amistad de Bolivia*\n\n"
+                + "Vamos a armar tu perfil en 10 pasos rápidos.\n"
+                + "Cuando termines, lo revisamos y te avisamos.\n\n"
+                + "*[1/10] ¿Cómo querés que te llamemos?*\n"
+                + "Escribiá tu nombre o apodo:");
     }
 
     public void sendApprovedStatus(String chatid, Profile profile) {
@@ -269,7 +273,7 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_BIRTHDATE);
-        sender.send(update.getChatid(), "¿Cuál es tu fecha de nacimiento? Escribila en formato DD/MM/AAAA, por ejemplo: 15/03/2000.");
+        sender.sendMarkdown(update.getChatid(), "*[2/10] 🎂 ¿Cuál es tu fecha de nacimiento?*\nEscribila en formato DD/MM/AAAA\nEjemplo: 15/03/2000");
     }
 
     private void askForName(String chatid) {
@@ -310,7 +314,7 @@ public class ClubRegistrationService {
                 Arrays.asList(new Button("Hombre", CALLBACK_GENDER_MALE),
                         new Button("Mujer", CALLBACK_GENDER_FEMALE),
                         new Button("Otro", CALLBACK_GENDER_OTHER)));
-        sender.send(update.getChatid(), "Seleccioná tu género:", true, buttons);
+        sender.sendMarkdown(update.getChatid(), "*[3/10] ⩧ ¿Cómo te identificás?*", true, buttons);
     }
 
     private void handleGender(User user, MessageUpdate update) {
@@ -332,7 +336,7 @@ public class ClubRegistrationService {
         List<List<Button>> buttons = Arrays.asList(
                 Arrays.asList(new Button("Hetero", CALLBACK_ORIENTATION_HETERO),
                         new Button("Bi", CALLBACK_ORIENTATION_BI)));
-        sender.send(update.getChatid(), "Seleccioná tu orientación:", true, buttons);
+        sender.sendMarkdown(update.getChatid(), "*[4/10] 💞 ¿Cuál es tu orientación?", true, buttons);
     }
 
     private void askForGender(String chatid) {
@@ -379,7 +383,7 @@ public class ClubRegistrationService {
     }
 
     private void askForCity(String chatid) {
-        sender.send(chatid, "¿En qué ciudad de Bolivia estás?", true, CityOption.getButtonRows());
+        sender.sendMarkdown(chatid, "*[5/10] 📍 ¿En qué ciudad de Bolivia estás?*", true, CityOption.getButtonRows());
     }
 
     private void handleCity(User user, MessageUpdate update) {
@@ -398,7 +402,9 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_DESCRIPTION);
-        sender.send(update.getChatid(), "Contanos un poco sobre vos:");
+        sender.sendMarkdown(update.getChatid(),
+                "*[6/10] 📝 Contanos un poco sobre vos*\n"
+                + "Ej: _\"Soy profe de yoga, me encanta cocinar y viajar. Busco nuevos amigos para compartir plan\"_");
     }
 
     private void handleDescription(User user, MessageUpdate update) {
@@ -416,7 +422,10 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_TASTES);
-        sender.send(update.getChatid(), "¿Qué cosas te gustan? (música, hobbies, etc.)");
+        sender.sendMarkdown(update.getChatid(),
+                "*[7/10] 🎸 ¿Qué cosas te gustan?*\n"
+                + "Música, hobbies, deportes, series, lo que quieras\n"
+                + "Ej: _\"Rock, fut, cocina, Netflix, juegos de mesa\"_");
     }
 
     private void handleTastes(User user, MessageUpdate update) {
@@ -434,7 +443,9 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_TRAITS);
-        sender.send(update.getChatid(), "¿Cómo describirías tu personalidad?");
+        sender.sendMarkdown(update.getChatid(),
+                "*[8/10] 🧠 ¿Cómo es tu personalidad?*\n"
+                + "Ej: _\"Divertido, directo, buen oyente, un poco tímido al principio\"_");
     }
 
     private void handleTraits(User user, MessageUpdate update) {
@@ -456,7 +467,7 @@ public class ClubRegistrationService {
     }
 
     private void askForLookingFor(String chatid) {
-        sender.send(chatid, "¿Qué estás buscando en el club de amistad?", true,
+        sender.sendMarkdown(chatid, "*[9/10] 💘 ¿Qué estás buscando?*", true,
                 LookingForOption.getButtonRows());
     }
 
@@ -476,8 +487,10 @@ public class ClubRegistrationService {
         profileRepository.save(profile);
 
         user.setComando(STATE_REGISTER_PHOTO);
-        sender.send(update.getChatid(),
-                "Por últímo, enviá fotos para tu perfil (hasta " + MAX_PHOTOS + "). Podés empezar con una selfie o la foto que mejor te represente.");
+        sender.sendMarkdown(update.getChatid(),
+                "*[10/10] 📸 Fotos de tu perfil*\n"
+                + "Envíá hasta " + MAX_PHOTOS + " fotos. La primera es la principal.\n"
+                + "_Tip: una selfie clara hace la diferencia 😉_");
     }
 
     private void handlePhoto(User user, MessageUpdate update) {
@@ -737,6 +750,8 @@ public class ClubRegistrationService {
         preview.append("*⚧ Género:* ").append(translateGender(profile.getGender())).append("\n");
         preview.append("*💕 Orientación:* ").append(translateOrientation(profile.getOrientation())).append("\n");
         preview.append("*📍 Ciudad:* ").append(MarkdownEscaper.escape(profile.getCity())).append("\n");
+        int photos = profile.photoCount();
+        preview.append("*📸 Fotos:* ").append(photos).append(" foto").append(photos != 1 ? "s" : "").append("\n\n");
         preview.append("*📝 Sobre vos:* ").append(MarkdownEscaper.escape(profile.getDescription())).append("\n");
         preview.append("*🎸 Gustos:* ").append(MarkdownEscaper.escape(profile.getTastes())).append("\n");
         preview.append("*🧠 Personalidad:* ").append(MarkdownEscaper.escape(profile.getTraits())).append("\n");

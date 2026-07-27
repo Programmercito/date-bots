@@ -197,7 +197,7 @@ class ClubRegistrationServiceTest {
         service.handle(user, newUpdate("invalid_callback", USERNAME));
 
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_LOOKING_FOR);
-        verify(sender).send(eq(CHATID), any(), eq(true), any(List.class));
+        verify(sender).sendMarkdown(eq(CHATID), any(), eq(true), any(List.class));
         verify(profileRepository, never()).save(any());
     }
 
