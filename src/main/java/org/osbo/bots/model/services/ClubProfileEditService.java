@@ -42,6 +42,7 @@ public class ClubProfileEditService {
     public static final String CALLBACK_EDIT_TRAITS = "club_edit_traits";
     public static final String CALLBACK_EDIT_LOOKING_FOR = "club_edit_looking_for";
     public static final String CALLBACK_EDIT_PHOTO = "club_edit_photo";
+    public static final String CALLBACK_EDIT_PHOTO_DONE = "club_edit_photo_done";
     public static final String CALLBACK_EDIT_CONTACT = "club_edit_contact";
     public static final String CALLBACK_EDIT_FINISH = "club_edit_finish";
     public static final String CALLBACK_EDIT_CANCEL = "club_edit_cancel";
@@ -103,6 +104,10 @@ public class ClubProfileEditService {
         if (comando != null && comando.startsWith("club_edit_")) {
             if (COMMAND_CLUB.equals(update.getText()) || COMMAND_START.equals(update.getText())) {
                 cancelEdit(user, update);
+                return true;
+            }
+            if (CALLBACK_EDIT_PHOTO_DONE.equals(update.getText()) && STATE_EDIT_PHOTO.equals(comando)) {
+                handlePhotoDone(user, update);
                 return true;
             }
             handleEditState(user, update);
@@ -308,9 +313,11 @@ public class ClubProfileEditService {
             }
             case CALLBACK_EDIT_PHOTO -> {
                 user.setComando(STATE_EDIT_PHOTO);
+                int current = profile.photoCount();
+                String currentInfo = current > 0 ? "Tenés " + current + " foto" + (current > 1 ? "s" : "") + " guardada" + (current > 1 ? "s" : "") + ". Las nuevas *reemplazarán* las actuales." : "Todavía no tenés fotos.";
                 sender.sendMarkdown(update.getChatid(),
-                        "*📷 Foto*\nEnvíá una nueva foto para tu perfil. La foto actual se muestra arriba.", true,
-                        cancelButtonRowAsList());
+                        "*📷 Fotos*\n" + currentInfo + "\n\nEnviá tus nuevas fotos (hasta " + ClubRegistrationService.MAX_PHOTOS + "). La primera foto que mandes reemplazará las actuales.",
+                        true, cancelButtonRowAsList());
             }
             case CALLBACK_EDIT_CONTACT -> {
                 user.setComando(STATE_EDIT_CONTACT);
@@ -543,12 +550,41 @@ public class ClubProfileEditService {
         }
         String[] medias = update.getMedias();
         if (medias == null || medias.length == 0 || medias[0] == null || medias[0].isBlank()) {
-            sender.sendMarkdown(update.getChatid(),
-                    "*📷 Foto*\n\nNo recibí una foto. Por favor, enviá una imagen.", true,
-                    cancelButtonRowAsList());
+            if (profile.photoCount() == 0) {
+                sender.sendMarkdown(update.getChatid(),
+                        "*📷 Fotos*\n\nNo recibí una foto. Por favor, enviá al menos una imagen.", true,
+                        cancelButtonRowAsList());
+            }
             return;
         }
-        profile.setPhotoFileId(medias[0]);
+        // First photo resets the collection; subsequent ones accumulate
+        if (profile.getPhotoFileIds() == null || profile.getPhotoFileIds().isBlank()) {
+            profile.resetPhotos(medias[0]);
+        } else {
+            profile.addPhoto(medias[0]);
+        }
+        profile.setUpdatedAt(OffsetDateTime.now().toString());
+        profileRepository.save(profile);
+
+        int count = profile.photoCount();
+        if (count >= ClubRegistrationService.MAX_PHOTOS) {
+            saveAndReturnToMenu(user, update, profile);
+            return;
+        }
+        List<List<Button>> buttons = new java.util.ArrayList<>();
+        buttons.add(List.of(new Button("✅ Listo (" + count + " foto" + (count > 1 ? "s" : "") + ")", CALLBACK_EDIT_PHOTO_DONE)));
+        buttons.add(cancelButtonRow());
+        sender.sendMarkdown(update.getChatid(),
+                "📸 Foto " + count + " guardada. Podés enviar más (hasta " + ClubRegistrationService.MAX_PHOTOS + ") o tocar Listo.",
+                true, buttons);
+    }
+
+    private void handlePhotoDone(User user, MessageUpdate update) {
+        Profile profile = requireApprovedProfile(update.getChatid());
+        if (profile == null) {
+            user.setComando("start");
+            return;
+        }
         saveAndReturnToMenu(user, update, profile);
     }
 

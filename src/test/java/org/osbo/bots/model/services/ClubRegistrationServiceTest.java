@@ -124,8 +124,12 @@ class ClubRegistrationServiceTest {
         MessageUpdate photoUpdate = newUpdate(null, USERNAME);
         photoUpdate.setMedias(new String[] { "photo-file-id" });
         service.handle(user, photoUpdate);
-        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CONTACT);
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PHOTO);
         assertThat(profile.getPhotoFileId()).isEqualTo("photo-file-id");
+
+        // Tap "Listo" to proceed
+        service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_PHOTO_DONE, USERNAME));
+        assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CONTACT);
 
         service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_CONTACT_TELEGRAM, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_PREVIEW);

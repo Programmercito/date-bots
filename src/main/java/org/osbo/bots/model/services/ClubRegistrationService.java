@@ -43,6 +43,9 @@ public class ClubRegistrationService {
     public static final String CALLBACK_ORIENTATION_BI = "club_orientation_bi";
 
     
+    public static final String CALLBACK_PHOTO_DONE = "club_photo_done";
+    public static final int MAX_PHOTOS = 10;
+
     public static final String CALLBACK_PREVIEW_OK = "club_preview_ok";
     public static final String CALLBACK_PREVIEW_EDIT = "club_preview_edit";
 
@@ -111,6 +114,11 @@ public class ClubRegistrationService {
 
         if (CALLBACK_CLUB_RETRY_MODERATION.equals(text)) {
             handlePendingRetry(user, update);
+            return true;
+        }
+
+        if (CALLBACK_PHOTO_DONE.equals(text) && STATE_REGISTER_PHOTO.equals(user.getComando())) {
+            handlePhotoDone(user, update);
             return true;
         }
 
@@ -469,7 +477,7 @@ public class ClubRegistrationService {
 
         user.setComando(STATE_REGISTER_PHOTO);
         sender.send(update.getChatid(),
-                "Por último, enviá una foto para tu perfil. Podés usar una selfie o una foto que te represente.");
+                "Por últímo, enviá fotos para tu perfil (hasta " + MAX_PHOTOS + "). Podés empezar con una selfie o la foto que mejor te represente.");
     }
 
     private void handlePhoto(User user, MessageUpdate update) {
@@ -480,14 +488,41 @@ public class ClubRegistrationService {
         }
         String[] medias = update.getMedias();
         if (medias == null || medias.length == 0 || medias[0] == null || medias[0].isBlank()) {
-            sender.send(update.getChatid(),
-                    "No recibí una foto. Por favor, enviá una imagen para tu perfil.");
+            if (profile.photoCount() == 0) {
+                sender.send(update.getChatid(),
+                        "No recibí una foto. Por favor, enviá al menos una imagen para tu perfil.");
+            }
             return;
         }
-        profile.setPhotoFileId(medias[0]);
+        boolean added = profile.addPhoto(medias[0]);
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
 
+        int count = profile.photoCount();
+        if (count >= MAX_PHOTOS) {
+            // Reached limit — move on automatically
+            user.setComando(STATE_REGISTER_CONTACT);
+            sender.send(update.getChatid(), "📸 " + count + " fotos guardadas \u2705 (máximo alcanzado).");
+            askForContact(update.getChatid(), update.getUser(), profile);
+            return;
+        }
+        List<List<Button>> buttons = List.of(
+                List.of(new Button("✅ Listo (" + count + " foto" + (count > 1 ? "s" : "") + ")", CALLBACK_PHOTO_DONE)));
+        sender.send(update.getChatid(),
+                "📸 Foto " + count + " guardada. Podés enviar más (hasta " + MAX_PHOTOS + ") o tocar Listo.",
+                true, buttons);
+    }
+
+    private void handlePhotoDone(User user, MessageUpdate update) {
+        Profile profile = requireIncompleteProfile(update.getChatid());
+        if (profile == null) {
+            restart(user, update.getChatid());
+            return;
+        }
+        if (profile.photoCount() == 0) {
+            sender.send(update.getChatid(), "Necesitás enviar al menos una foto para continuar.");
+            return;
+        }
         user.setComando(STATE_REGISTER_CONTACT);
         askForContact(update.getChatid(), update.getUser(), profile);
     }
