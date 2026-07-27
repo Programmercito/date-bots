@@ -319,13 +319,13 @@ class ClubDiscoveryServiceTest {
         SkippedProfile activeSkip = new SkippedProfile();
         activeSkip.setFromChatid(VIEWER_CHATID);
         activeSkip.setToChatid(TARGET_CHATID);
-        activeSkip.setExpiresAt(java.time.OffsetDateTime.now().plusDays(1).toString());
+        activeSkip.setExpiresAtMs(java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS).toEpochMilli());
 
         when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
         when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
                 ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
         when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
-        when(skippedProfileRepository.findByFromChatidAndExpiresAtAfter(eq(VIEWER_CHATID), anyString()))
+        when(skippedProfileRepository.findByFromChatidAndExpiresAtMsAfter(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.anyLong()))
                 .thenReturn(List.of(activeSkip));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -439,9 +439,9 @@ class ClubDiscoveryServiceTest {
         verify(skippedProfileRepository).save(skippedProfileCaptor.capture());
         assertThat(skippedProfileCaptor.getValue().getFromChatid()).isEqualTo(VIEWER_CHATID);
         assertThat(skippedProfileCaptor.getValue().getToChatid()).isEqualTo(TARGET_CHATID);
-        assertThat(java.time.Instant.parse(skippedProfileCaptor.getValue().getExpiresAt()))
-                .isBetween(java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L - 60),
-                        java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L + 60));
+        assertThat(skippedProfileCaptor.getValue().getExpiresAtMs())
+                .isBetween(java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L - 60).toEpochMilli(),
+                        java.time.Instant.now().plusSeconds(ClubDiscoveryService.SKIP_COOLDOWN_DAYS * 24L * 60L * 60L + 60).toEpochMilli());
         verify(jmsTemplate).convertAndSend(eq("queue.analytics"), any(AnalyticsMessage.class));
         verify(jmsTemplate, never()).convertAndSend(eq("queue.like"), any(LikeMessage.class));
     }

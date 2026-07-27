@@ -11,6 +11,6 @@ public interface SkippedProfileRepository extends JpaRepository<SkippedProfile, 
 
     SkippedProfile findByFromChatidAndToChatid(String fromChatid, String toChatid);
 
-    List<SkippedProfile> findByFromChatidAndExpiresAtAfter(String fromChatid, String expiresAt);
+    List<SkippedProfile> findByFromChatidAndExpiresAtMsAfter(String fromChatid, Long expiresAtMs);
 
 }
