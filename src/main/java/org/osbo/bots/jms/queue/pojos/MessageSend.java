@@ -31,4 +31,11 @@ public class MessageSend {
      * "Markdown", "MarkdownV2", "HTML".
      */
     public String parseMode;
+
+    /**
+     * When true, ReceiverForSend will store the resulting message ID in the
+     * user's {@code photoEditPromptMessageId} field so the prompt can be edited
+     * in place during the photo edit flow.
+     */
+    public boolean saveAsPhotoEditPrompt;
 }

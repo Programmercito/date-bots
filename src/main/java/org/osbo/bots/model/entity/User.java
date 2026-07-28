@@ -53,6 +53,13 @@ public class User {
     private Integer previousProfileMessageId;
 
     /**
+     * Telegram message ID of the editable photo-edit prompt. Used to update the
+     * counter and buttons in place while the user adds or removes photos.
+     */
+    @Column(name = "photo_edit_prompt_message_id")
+    private Integer photoEditPromptMessageId;
+
+    /**
      * Pipe-separated Telegram message IDs of the media group photos currently
      * shown in discovery. Used to delete all photos when advancing to the next profile.
      */

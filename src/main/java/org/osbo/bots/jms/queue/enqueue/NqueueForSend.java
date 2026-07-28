@@ -103,6 +103,23 @@ public class NqueueForSend {
         this.send(chatid, text, "text", null, null, disableNotification, buttons, null, "Markdown");
     }
 
+    /**
+     * Sends the editable photo-edit prompt. ReceiverForSend will store the
+     * resulting message ID in the user's photoEditPromptMessageId field.
+     */
+    public void sendPhotoEditPrompt(@NonNull String chatid, @NonNull String text,
+            List<List<Button>> buttons) {
+        MessageSend message = new MessageSend();
+        message.setChatid(chatid);
+        message.setText(text);
+        message.setTipo("text");
+        message.setDisableNotification(true);
+        message.setButtons(buttons);
+        message.setParseMode("Markdown");
+        message.setSaveAsPhotoEditPrompt(true);
+        jmsTemplate.convertAndSend("queue.send", message);
+    }
+
     public void sendPhoto(@NonNull String chatid, @NonNull String photo, @NonNull String caption,
             boolean disableNotification, List<List<Button>> buttons, String parseMode) {
         this.send(chatid, caption, "text", photo, null, disableNotification, buttons, null, parseMode);

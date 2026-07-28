@@ -199,6 +199,21 @@ class ClubProfileEditServiceTest {
     }
 
     @Test
+    void shouldRejectEditCallbackAsTraitsValue() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_TRAITS);
+        MessageUpdate update = newUpdate(ClubProfileEditService.CALLBACK_EDIT_PHOTO, USERNAME);
+        Profile profile = approvedProfile();
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, update);
+
+        assertThat(profile.getTraits()).isEqualTo("Funny");
+        assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_TRAITS);
+        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(profileRepository, never()).save(any(Profile.class));
+    }
+
+    @Test
     void shouldEditLookingFor() {
         User user = newUser(ClubProfileEditService.STATE_EDIT_LOOKING_FOR);
         MessageUpdate update = newUpdate(LookingForOption.CALLBACK_LOOKING_FOR_CASUAL, USERNAME);
@@ -292,7 +307,7 @@ class ClubProfileEditServiceTest {
         service.handle(user, photoUpdate);
 
         assertThat(user.getTempPhotoList()).containsExactly("A", "B", "C", "D", "E", "F", "G", "H", "I", "J");
-        verify(sender).send(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(sender).sendPhotoEditPrompt(eq(CHATID), anyString(), any(List.class));
     }
 
     @Test
@@ -420,11 +435,12 @@ class ClubProfileEditServiceTest {
         service.handle(user, update);
 
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
-        verify(sender).sendMarkdown(eq(CHATID), textCaptor.capture(), eq(true), any(List.class));
+        verify(sender).sendPhotoEditPrompt(eq(CHATID), textCaptor.capture(), any(List.class));
         String text = textCaptor.getValue();
         assertThat(text).contains("borrador");
-        assertThat(text).contains("hasta 10");
+        assertThat(text).contains("de 10");
         assertThat(text).contains("Listo, guardar");
+        assertThat(text).contains("Quitar todas");
     }
 
     @Test
@@ -439,7 +455,7 @@ class ClubProfileEditServiceTest {
         service.handle(user, textUpdate);
 
         assertThat(user.getTempPhotoFileIds()).isEqualTo("A");
-        verify(sender).sendMarkdown(eq(CHATID), anyString(), eq(true), any(List.class));
+        verify(sender).sendPhotoEditPrompt(eq(CHATID), anyString(), any(List.class));
     }
 
     @Test
@@ -458,6 +474,7 @@ class ClubProfileEditServiceTest {
         assertThat(user.getTempPhotoFileIds()).isEqualTo("A|new-photo-id");
         assertThat(profile.getPhotoFileIds()).isEqualTo("A");
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_PHOTO);
+        verify(sender).sendPhotoEditPrompt(eq(CHATID), anyString(), any(List.class));
 
         // Tap "Listo" to save and return to menu
         service.handle(user, newUpdate(ClubProfileEditService.CALLBACK_EDIT_PHOTO_DONE, USERNAME));
@@ -465,6 +482,41 @@ class ClubProfileEditServiceTest {
         assertThat(user.getComando()).isEqualTo(ClubProfileEditService.STATE_EDIT_MENU);
         assertThat(profile.getPhotoFileIds()).isEqualTo("A|new-photo-id");
         verify(sender).sendPhoto(eq(CHATID), eq("A|new-photo-id".split("\\|")[0]), anyString(), eq(true), any(List.class), eq("Markdown"));
+    }
+
+    @Test
+    void shouldEditPhotoPromptInPlace() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_PHOTO);
+        user.setTempPhotoFileIds("A");
+        user.setPhotoEditPromptMessageId(123);
+        MessageUpdate photoUpdate = newUpdate(null, USERNAME);
+        photoUpdate.setMedias(new String[] { "new-photo-id" });
+        Profile profile = approvedProfile();
+        profile.setPhotoFileIds("A");
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, photoUpdate);
+
+        assertThat(user.getTempPhotoFileIds()).isEqualTo("A|new-photo-id");
+        verify(sender).editMessageMarkdown(eq(CHATID), eq(123), anyString(), any(List.class));
+        verify(sender, never()).sendPhotoEditPrompt(eq(CHATID), anyString(), any(List.class));
+    }
+
+    @Test
+    void shouldClearAllPhotos() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_PHOTO);
+        user.setTempPhotoFileIds("A|B|C");
+        user.setPhotoEditPromptMessageId(123);
+        MessageUpdate clearUpdate = newUpdate(ClubProfileEditService.CALLBACK_EDIT_PHOTO_CLEAR_ALL, USERNAME);
+        Profile profile = approvedProfile();
+        profile.setPhotoFileIds("A|B|C");
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handle(user, clearUpdate);
+
+        assertThat(user.getTempPhotoFileIds()).isNull();
+        verify(userRepository).save(user);
+        verify(sender).editMessageMarkdown(eq(CHATID), eq(123), anyString(), any(List.class));
     }
 
     @Test
