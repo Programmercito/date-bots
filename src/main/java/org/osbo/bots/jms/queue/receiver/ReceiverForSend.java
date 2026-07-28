@@ -145,6 +145,14 @@ public class ReceiverForSend {
             response = bot.execute(sendphoto);
         }
         if (response.isOk()) {
+            if (message.isSaveAsPhotoEditPrompt()) {
+                int id = response.message().messageId();
+                User user = userService.findById(message.getChatid());
+                if (user != null) {
+                    user.setPhotoEditPromptMessageId(id);
+                    userService.save(user);
+                }
+            }
             if ("channel".equals(message.getTipo())) {
                 int id = response.message().messageId();
                 Message msg;

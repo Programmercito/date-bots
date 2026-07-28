@@ -43,6 +43,7 @@ public class ClubProfileEditService {
     public static final String CALLBACK_EDIT_LOOKING_FOR = "club_edit_looking_for";
     public static final String CALLBACK_EDIT_PHOTO = "club_edit_photo";
     public static final String CALLBACK_EDIT_PHOTO_DONE = "club_edit_photo_done";
+    public static final String CALLBACK_EDIT_PHOTO_CLEAR_ALL = "club_edit_photo_clear_all";
     public static final String CALLBACK_EDIT_CONTACT = "club_edit_contact";
     public static final String CALLBACK_EDIT_FINISH = "club_edit_finish";
     public static final String CALLBACK_EDIT_CANCEL = "club_edit_cancel";
@@ -110,6 +111,10 @@ public class ClubProfileEditService {
                 handlePhotoDone(user, update);
                 return true;
             }
+            if (CALLBACK_EDIT_PHOTO_CLEAR_ALL.equals(update.getText()) && STATE_EDIT_PHOTO.equals(comando)) {
+                handlePhotoClearAll(user, update);
+                return true;
+            }
             handleEditState(user, update);
             return true;
         }
@@ -125,6 +130,7 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
+        user.setPhotoEditPromptMessageId(null);
         user.setComando(STATE_EDIT_MENU);
         sendEditMenu(update.getChatid(), profile);
     }
@@ -132,6 +138,7 @@ public class ClubProfileEditService {
     private void cancelEdit(User user, MessageUpdate update) {
         Profile profile = requireApprovedProfile(update.getChatid());
         user.clearTempPhotos();
+        user.setPhotoEditPromptMessageId(null);
         userRepository.save(user);
         if (COMMAND_CLUB.equals(update.getText()) && profile != null) {
             user.setComando("start");
@@ -211,6 +218,7 @@ public class ClubProfileEditService {
         if (CALLBACK_EDIT_CANCEL.equals(update.getText())) {
             Profile profile = requireApprovedProfile(update.getChatid());
             user.clearTempPhotos();
+            user.setPhotoEditPromptMessageId(null);
             userRepository.save(user);
             if (profile != null) {
                 user.setComando(STATE_EDIT_MENU);
@@ -328,6 +336,7 @@ public class ClubProfileEditService {
             }
             case CALLBACK_EDIT_FINISH -> {
                 user.clearTempPhotos();
+                user.setPhotoEditPromptMessageId(null);
                 userRepository.save(user);
                 sender.sendMarkdown(update.getChatid(), "✅ *Perfil actualizado*\n\n¿Querés hacer algo más?", true,
                         List.of(
@@ -359,33 +368,36 @@ public class ClubProfileEditService {
     }
 
     private void sendPhotoPrompt(String chatid, User user) {
+        String text = buildPhotoPromptText(user);
+        sender.sendPhotoEditPrompt(chatid, text, photoActionButtons());
+    }
+
+    private String buildPhotoPromptText(User user) {
         int count = user.getTempPhotoCount();
         String currentInfo = count > 0
-                ? "Tenés " + count + " foto" + (count > 1 ? "s" : "") + " guardada" + (count > 1 ? "s" : "") + "."
-                : "Todavía no tenés fotos.";
-        String text = "*📷 Fotos*\n" + currentInfo
-                + "\n\nLas nuevas fotos se agregan al borrador. Podés enviar una o más imágenes (hasta "
-                + ClubRegistrationService.MAX_PHOTOS + ")."
-                + "\nSolo tocar *Listo, guardar* confirma los cambios en tu perfil.";
-        sender.sendMarkdown(chatid, text, true, photoActionButtons());
+                ? "Tenés *" + count + " de " + ClubRegistrationService.MAX_PHOTOS + "* foto"
+                        + (count > 1 ? "s" : "") + " en el borrador."
+                : "Todavía no tenés fotos en el borrador.";
+        return "*📷 Editando tus fotos*\n" + currentInfo
+                + "\n\nEnvíá las fotos que quieras agregar. La primera será la principal."
+                + "\nTocá *Listo, guardar* para confirmar, *Quitar todas* para borrarlas, o *Cancelar* para descartar.";
     }
 
     private List<List<Button>> photoActionButtons() {
         return List.of(
-                List.of(new Button("✅ Listo, guardar", CALLBACK_EDIT_PHOTO_DONE)),
+                List.of(new Button("✅ Listo, guardar", CALLBACK_EDIT_PHOTO_DONE),
+                        new Button("🗑️ Quitar todas", CALLBACK_EDIT_PHOTO_CLEAR_ALL)),
                 cancelButtonRow());
     }
 
     private void handleName(User user, MessageUpdate update) {
-        if (isEmptyText(update)) {
-            Profile profile = requireApprovedProfile(update.getChatid());
-            sendFieldPrompt(update.getChatid(), "👤 Nombre", "escribí tu nuevo nombre o apodo",
-                    profile == null ? null : profile.getName());
-            return;
-        }
         Profile profile = requireApprovedProfile(update.getChatid());
         if (profile == null) {
             user.setComando("start");
+            return;
+        }
+        if (isEmptyText(update) || isEditCallback(update.getText())) {
+            sendFieldPrompt(update.getChatid(), "👤 Nombre", "escribí tu nuevo nombre o apodo", profile.getName());
             return;
         }
         profile.setName(update.getText().trim());
@@ -398,7 +410,7 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
-        if (isEmptyText(update)) {
+        if (isEmptyText(update) || isEditCallback(update.getText())) {
             sendFieldPrompt(update.getChatid(), "🎂 Fecha de nacimiento",
                     "escribí tu nueva fecha en formato DD/MM/AAAA, por ejemplo: 15/03/2000",
                     profile.getBirthDate() != null ? profile.getBirthDate().toString() : null);
@@ -507,7 +519,7 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
-        if (isEmptyText(update)) {
+        if (isEmptyText(update) || isEditCallback(update.getText())) {
             sendFieldPrompt(update.getChatid(), "📝 Sobre vos", "contanos un poco sobre vos",
                     profile.getDescription());
             return;
@@ -522,7 +534,7 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
-        if (isEmptyText(update)) {
+        if (isEmptyText(update) || isEditCallback(update.getText())) {
             sendFieldPrompt(update.getChatid(), "🎸 Gustos", "contanos qué cosas te gustan (música, hobbies, etc.)",
                     profile.getTastes());
             return;
@@ -537,7 +549,7 @@ public class ClubProfileEditService {
             user.setComando("start");
             return;
         }
-        if (isEmptyText(update)) {
+        if (isEmptyText(update) || isEditCallback(update.getText())) {
             sendFieldPrompt(update.getChatid(), "🧠 Personalidad", "describí tu personalidad", profile.getTraits());
             return;
         }
@@ -568,7 +580,7 @@ public class ClubProfileEditService {
     private void handlePhoto(User user, MessageUpdate update) {
         String[] medias = update.getMedias();
         if (medias == null || medias.length == 0) {
-            sendPhotoPrompt(update.getChatid(), user);
+            refreshPhotoPrompt(update.getChatid(), user);
             return;
         }
 
@@ -591,7 +603,7 @@ public class ClubProfileEditService {
 
         int count = user.getTempPhotoCount();
         if (added == 0 && ignored == 0) {
-            sendPhotoPrompt(update.getChatid(), user);
+            refreshPhotoPrompt(update.getChatid(), user);
             return;
         }
 
@@ -605,13 +617,37 @@ public class ClubProfileEditService {
         } else {
             feedback = "📸 Foto " + count + " recibida ✅";
         }
-        sender.send(update.getChatid(), feedback, true, photoActionButtons());
+        refreshPhotoPrompt(update.getChatid(), user, feedback);
+    }
+
+    private void refreshPhotoPrompt(String chatid, User user) {
+        refreshPhotoPrompt(chatid, user, null);
+    }
+
+    private void refreshPhotoPrompt(String chatid, User user, String extraLine) {
+        String text = buildPhotoPromptText(user);
+        if (extraLine != null && !extraLine.isBlank()) {
+            text = text + "\n\n" + extraLine;
+        }
+        Integer messageId = user.getPhotoEditPromptMessageId();
+        if (messageId != null) {
+            sender.editMessageMarkdown(chatid, messageId, text, photoActionButtons());
+        } else {
+            sender.sendPhotoEditPrompt(chatid, text, photoActionButtons());
+        }
+    }
+
+    private void handlePhotoClearAll(User user, MessageUpdate update) {
+        user.clearTempPhotos();
+        userRepository.save(user);
+        refreshPhotoPrompt(update.getChatid(), user, "Se quitaron todas las fotos del borrador.");
     }
 
     private void handlePhotoDone(User user, MessageUpdate update) {
         Profile profile = requireApprovedProfile(update.getChatid());
         if (profile == null) {
             user.clearTempPhotos();
+            user.setPhotoEditPromptMessageId(null);
             user.setComando("start");
             return;
         }
@@ -624,6 +660,7 @@ public class ClubProfileEditService {
             profile.setPhotoFileId(staged.get(0));
         }
         user.clearTempPhotos();
+        user.setPhotoEditPromptMessageId(null);
         userRepository.save(user);
         saveAndReturnToMenu(user, update, profile);
     }
@@ -725,6 +762,7 @@ public class ClubProfileEditService {
     private void saveAndReturnToMenu(User user, MessageUpdate update, Profile profile) {
         profile.setUpdatedAt(isoTimestamp());
         profileRepository.save(profile);
+        user.setPhotoEditPromptMessageId(null);
         user.setComando(STATE_EDIT_MENU);
         sendEditMenu(update.getChatid(), profile);
     }
@@ -785,6 +823,32 @@ public class ClubProfileEditService {
             case ORIENTATION_BI -> "Bi";
             default -> orientation;
         };
+    }
+
+    /**
+     * Returns true when the supplied text is one of the edit-menu callbacks.
+     * This prevents a delayed tap on a menu button from being saved as a free-text
+     * field value while the user is typing a name, description, tastes, etc.
+     */
+    private boolean isEditCallback(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return text.equals(CALLBACK_EDIT_NAME)
+                || text.equals(CALLBACK_EDIT_BIRTHDATE)
+                || text.equals(CALLBACK_EDIT_GENDER)
+                || text.equals(CALLBACK_EDIT_ORIENTATION)
+                || text.equals(CALLBACK_EDIT_CITY)
+                || text.equals(CALLBACK_EDIT_DESCRIPTION)
+                || text.equals(CALLBACK_EDIT_TASTES)
+                || text.equals(CALLBACK_EDIT_TRAITS)
+                || text.equals(CALLBACK_EDIT_LOOKING_FOR)
+                || text.equals(CALLBACK_EDIT_PHOTO)
+                || text.equals(CALLBACK_EDIT_PHOTO_DONE)
+                || text.equals(CALLBACK_EDIT_PHOTO_CLEAR_ALL)
+                || text.equals(CALLBACK_EDIT_CONTACT)
+                || text.equals(CALLBACK_EDIT_FINISH)
+                || text.equals(CALLBACK_EDIT_CANCEL);
     }
 
     private String isoTimestamp() {
