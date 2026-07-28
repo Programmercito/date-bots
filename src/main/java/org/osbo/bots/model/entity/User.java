@@ -1,5 +1,9 @@
 package org.osbo.bots.model.entity;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -13,6 +17,9 @@ import lombok.Data;
 @Table(name = "users")
 @Data
 public class User {
+
+    public static final int MAX_PHOTOS = 10;
+
     @Id
     private String chatid;
     private String user;
@@ -51,5 +58,71 @@ public class User {
      */
     @Column(name = "media_group_message_ids")
     private String mediaGroupMessageIds;
+
+    /**
+     * Pipe-separated list of photo file IDs staged during profile photo editing.
+     * Committed to {@link Profile#photoFileIds} only when the user explicitly saves.
+     */
+    @Column(name = "temp_photo_file_ids")
+    private String tempPhotoFileIds;
+
+    /**
+     * Returns the staged photo file IDs as a list.
+     */
+    public List<String> getTempPhotoList() {
+        if (tempPhotoFileIds == null || tempPhotoFileIds.isBlank()) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(Arrays.asList(tempPhotoFileIds.split("\\|")));
+    }
+
+    /**
+     * Adds a photo file ID to the staged list. Ignores null/blank values,
+     * deduplicates, and enforces {@link #MAX_PHOTOS}.
+     *
+     * @return true if added, false if ignored due to duplicate or limit
+     */
+    public boolean addTempPhoto(String fileId) {
+        if (fileId == null || fileId.isBlank()) {
+            return false;
+        }
+        List<String> list = getTempPhotoList();
+        if (list.size() >= MAX_PHOTOS || list.contains(fileId)) {
+            return false;
+        }
+        list.add(fileId);
+        tempPhotoFileIds = String.join("|", list);
+        return true;
+    }
+
+    /**
+     * Seeds the staged photo list from the profile's current photos without
+     * modifying the profile.
+     */
+    public void setTempPhotosFromProfile(Profile profile) {
+        if (profile.getPhotoFileIds() != null && !profile.getPhotoFileIds().isBlank()) {
+            tempPhotoFileIds = profile.getPhotoFileIds();
+            return;
+        }
+        if (profile.getPhotoFileId() != null && !profile.getPhotoFileId().isBlank()) {
+            tempPhotoFileIds = profile.getPhotoFileId();
+            return;
+        }
+        tempPhotoFileIds = null;
+    }
+
+    /**
+     * Clears the staged photo list.
+     */
+    public void clearTempPhotos() {
+        tempPhotoFileIds = null;
+    }
+
+    /**
+     * Returns the number of staged photos.
+     */
+    public int getTempPhotoCount() {
+        return getTempPhotoList().size();
+    }
 
 }

@@ -12,6 +12,7 @@ import org.osbo.bots.model.entity.DailyLimitId;
 import org.osbo.bots.model.entity.Like;
 import org.osbo.bots.model.entity.Profile;
 import org.osbo.bots.model.entity.Report;
+import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.entity.UserPlan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -35,6 +36,9 @@ class RepositoryTests {
 
     @Autowired
     private UserPlanRepository userPlanRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     void shouldSaveAndFindProfile() {
@@ -166,6 +170,35 @@ class RepositoryTests {
 
         assertThat(found).isNotNull();
         assertThat(found.getPlan()).isEqualTo("PREMIUM");
+    }
+
+    @Test
+    void shouldSaveAndFindUserWithNullTempPhotoFileIds() {
+        String chatid = randomChatid();
+        User user = new User();
+        user.setChatid(chatid);
+        user.setComando("start");
+
+        User saved = userRepository.save(user);
+        User found = userRepository.findById(saved.getChatid()).orElse(null);
+
+        assertThat(found).isNotNull();
+        assertThat(found.getTempPhotoFileIds()).isNull();
+    }
+
+    @Test
+    void shouldSaveAndFindUserWithTempPhotoFileIds() {
+        String chatid = randomChatid();
+        User user = new User();
+        user.setChatid(chatid);
+        user.setComando("club_edit_photo");
+        user.setTempPhotoFileIds("A|B|C");
+
+        User saved = userRepository.save(user);
+        User found = userRepository.findById(saved.getChatid()).orElse(null);
+
+        assertThat(found).isNotNull();
+        assertThat(found.getTempPhotoList()).containsExactly("A", "B", "C");
     }
 
     private String randomChatid() {

@@ -131,6 +131,8 @@ public class ClubProfileEditService {
 
     private void cancelEdit(User user, MessageUpdate update) {
         Profile profile = requireApprovedProfile(update.getChatid());
+        user.clearTempPhotos();
+        userRepository.save(user);
         if (COMMAND_CLUB.equals(update.getText()) && profile != null) {
             user.setComando("start");
             clubRegistrationService.sendApprovedStatus(update.getChatid(), profile);
@@ -208,6 +210,8 @@ public class ClubProfileEditService {
         String comando = user.getComando();
         if (CALLBACK_EDIT_CANCEL.equals(update.getText())) {
             Profile profile = requireApprovedProfile(update.getChatid());
+            user.clearTempPhotos();
+            userRepository.save(user);
             if (profile != null) {
                 user.setComando(STATE_EDIT_MENU);
                 sendEditMenu(update.getChatid(), profile);
@@ -241,6 +245,7 @@ public class ClubProfileEditService {
         String text = update.getText();
         Profile profile = requireApprovedProfile(update.getChatid());
         if (profile == null) {
+            user.clearTempPhotos();
             user.setComando("start");
             return;
         }
@@ -313,17 +318,17 @@ public class ClubProfileEditService {
             }
             case CALLBACK_EDIT_PHOTO -> {
                 user.setComando(STATE_EDIT_PHOTO);
-                int current = profile.photoCount();
-                String currentInfo = current > 0 ? "Tenés " + current + " foto" + (current > 1 ? "s" : "") + " guardada" + (current > 1 ? "s" : "") + ". Las nuevas *reemplazarán* las actuales." : "Todavía no tenés fotos.";
-                sender.sendMarkdown(update.getChatid(),
-                        "*📷 Fotos*\n" + currentInfo + "\n\nEnviá tus nuevas fotos (hasta " + ClubRegistrationService.MAX_PHOTOS + "). La primera foto que mandes reemplazará las actuales.",
-                        true, cancelButtonRowAsList());
+                user.setTempPhotosFromProfile(profile);
+                userRepository.save(user);
+                sendPhotoPrompt(update.getChatid(), user);
             }
             case CALLBACK_EDIT_CONTACT -> {
                 user.setComando(STATE_EDIT_CONTACT);
                 askForContact(update.getChatid(), update.getUser(), profile);
             }
             case CALLBACK_EDIT_FINISH -> {
+                user.clearTempPhotos();
+                userRepository.save(user);
                 sender.sendMarkdown(update.getChatid(), "✅ *Perfil actualizado*\n\n¿Querés hacer algo más?", true,
                         List.of(
                                 List.of(new Button("🔍 Ver personas", "/ver_personas"),
@@ -351,6 +356,24 @@ public class ClubProfileEditService {
 
     private List<Button> cancelButtonRow() {
         return List.of(new Button("❌ Cancelar edición", CALLBACK_EDIT_CANCEL));
+    }
+
+    private void sendPhotoPrompt(String chatid, User user) {
+        int count = user.getTempPhotoCount();
+        String currentInfo = count > 0
+                ? "Tenés " + count + " foto" + (count > 1 ? "s" : "") + " guardada" + (count > 1 ? "s" : "") + "."
+                : "Todavía no tenés fotos.";
+        String text = "*📷 Fotos*\n" + currentInfo
+                + "\n\nLas nuevas fotos se agregan al borrador. Podés enviar una o más imágenes (hasta "
+                + ClubRegistrationService.MAX_PHOTOS + ")."
+                + "\nSolo tocar *Listo, guardar* confirma los cambios en tu perfil.";
+        sender.sendMarkdown(chatid, text, true, photoActionButtons());
+    }
+
+    private List<List<Button>> photoActionButtons() {
+        return List.of(
+                List.of(new Button("✅ Listo, guardar", CALLBACK_EDIT_PHOTO_DONE)),
+                cancelButtonRow());
     }
 
     private void handleName(User user, MessageUpdate update) {
@@ -543,48 +566,65 @@ public class ClubProfileEditService {
     }
 
     private void handlePhoto(User user, MessageUpdate update) {
-        Profile profile = requireApprovedProfile(update.getChatid());
-        if (profile == null) {
-            user.setComando("start");
-            return;
-        }
         String[] medias = update.getMedias();
-        if (medias == null || medias.length == 0 || medias[0] == null || medias[0].isBlank()) {
-            if (profile.photoCount() == 0) {
-                sender.sendMarkdown(update.getChatid(),
-                        "*📷 Fotos*\n\nNo recibí una foto. Por favor, enviá al menos una imagen.", true,
-                        cancelButtonRowAsList());
-            }
+        if (medias == null || medias.length == 0) {
+            sendPhotoPrompt(update.getChatid(), user);
             return;
         }
-        // Always accumulate — never reset on re-entry
-        profile.addPhoto(medias[0]);
-        profile.setUpdatedAt(OffsetDateTime.now().toString());
-        profileRepository.save(profile);
 
-        int count = profile.photoCount();
-        if (count >= ClubRegistrationService.MAX_PHOTOS) {
-            sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅ — máximo alcanzado.");
-            saveAndReturnToMenu(user, update, profile);
+        int added = 0;
+        int ignored = 0;
+        for (String media : medias) {
+            if (media == null || media.isBlank()) {
+                continue;
+            }
+            if (user.addTempPhoto(media)) {
+                added++;
+            } else {
+                ignored++;
+            }
+        }
+
+        if (added > 0) {
+            userRepository.save(user);
+        }
+
+        int count = user.getTempPhotoCount();
+        if (added == 0 && ignored == 0) {
+            sendPhotoPrompt(update.getChatid(), user);
             return;
         }
-        sender.send(update.getChatid(), "📸 Foto " + count + " recibida ✅");
-        if (count == 1) {
-            List<List<Button>> buttons = new java.util.ArrayList<>();
-            buttons.add(List.of(new Button("✅ Listo, guardar", CALLBACK_EDIT_PHOTO_DONE)));
-            buttons.add(cancelButtonRow());
-            sender.send(update.getChatid(),
-                    "Podés seguir enviando fotos (hasta " + ClubRegistrationService.MAX_PHOTOS + ") o tocar Listo.",
-                    true, buttons);
+
+        String feedback;
+        if (count >= ClubRegistrationService.MAX_PHOTOS) {
+            feedback = "📸 Llegaste al límite de " + ClubRegistrationService.MAX_PHOTOS
+                    + " fotos. Tocá *Listo, guardar* para confirmar.";
+        } else if (ignored > 0) {
+            feedback = "📸 " + added + " foto(s) agregada(s). Algunas se ignoraron porque ya estaban o porque se alcanzó el límite de "
+                    + ClubRegistrationService.MAX_PHOTOS + ".";
+        } else {
+            feedback = "📸 Foto " + count + " recibida ✅";
         }
+        sender.send(update.getChatid(), feedback, true, photoActionButtons());
     }
 
     private void handlePhotoDone(User user, MessageUpdate update) {
         Profile profile = requireApprovedProfile(update.getChatid());
         if (profile == null) {
+            user.clearTempPhotos();
             user.setComando("start");
             return;
         }
+        List<String> staged = user.getTempPhotoList();
+        if (staged.isEmpty()) {
+            profile.setPhotoFileId(null);
+            profile.setPhotoFileIds(null);
+        } else {
+            profile.setPhotoFileIds(String.join("|", staged));
+            profile.setPhotoFileId(staged.get(0));
+        }
+        user.clearTempPhotos();
+        userRepository.save(user);
         saveAndReturnToMenu(user, update, profile);
     }
 
