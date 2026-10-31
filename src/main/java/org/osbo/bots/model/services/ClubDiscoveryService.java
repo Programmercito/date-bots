@@ -45,6 +45,7 @@ public class ClubDiscoveryService {
     public static final String CALLBACK_LIKE_PREFIX = "club_like_";
     public static final String CALLBACK_SKIP_PREFIX = "club_skip_";
     public static final String CALLBACK_REPORT_PREFIX = "club_report_";
+    public static final String CALLBACK_UNDO_SKIP_PREFIX = "club_undo_skip_";
 
     public static final String STATE_BROWSING = "club_browsing";
     public static final String STATE_NO_PROFILES = "club_no_profiles";
@@ -110,6 +111,11 @@ public class ClubDiscoveryService {
             return handleViewPeople(user, update);
         }
 
+        if (text.startsWith(CALLBACK_UNDO_SKIP_PREFIX)) {
+            handleUndoSkip(user, update);
+            return true;
+        }
+
         if (STATE_BROWSING.equals(user.getComando())) {
             if (text.startsWith(CALLBACK_LIKE_PREFIX)) {
                 handleLike(user, update);
@@ -146,8 +152,8 @@ public class ClubDiscoveryService {
      * @param update the Telegram update
      */
     public void showNextProfile(User user, MessageUpdate update) {
-        Profile next = findNextProfile(user.getChatid());
-        if (next == null) {
+        List<Profile> candidates = findCandidates(user.getChatid());
+        if (candidates.isEmpty()) {
             String notice = noProfilesNotice();
             if (STATE_NO_PROFILES.equals(user.getComando())) {
                 if (user.getCurrentProfileMessageId() != null) {
@@ -155,7 +161,7 @@ public class ClubDiscoveryService {
                     deleteMediaGroupMessages(user);
                     user.setCurrentProfileMessageId(null);
                     user.setMediaGroupMessageIds(null);
-                    sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
+                    sendEmptyNotice(update.getChatid(), notice);
                 }
                 userRepository.save(user);
                 return;
@@ -166,12 +172,15 @@ public class ClubDiscoveryService {
             user.setPreviousProfileMessageId(null);
             user.setCurrentProfileMessageId(null);
             user.setMediaGroupMessageIds(null);
-            sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
+            sendEmptyNotice(update.getChatid(), notice);
             user.setComando(STATE_NO_PROFILES);
             userRepository.save(user);
             return;
         }
+        showProfile(user, update, candidates.get(0), candidates.size());
+    }
 
+    private void showProfile(User user, MessageUpdate update, Profile next, int remaining) {
         user.setComando(STATE_BROWSING);
         String caption = buildProfileCaption(next);
         List<String> photos = next.getPhotoList();
@@ -179,6 +188,7 @@ public class ClubDiscoveryService {
         String adminContacts = isAdmin ? buildAdminContacts(next, true) : null;
         int messageLimit = photos.size() > 1 || photos.isEmpty()
                 ? TelegramPresentation.TEXT_LIMIT : TelegramPresentation.CAPTION_LIMIT;
+        caption = TelegramPresentation.decorate(caption, "", "\n\n👀 Quedan " + remaining + " personas por ver", messageLimit);
         boolean separateContacts = adminContacts != null
                 && (long) caption.length() + adminContacts.length() > messageLimit;
         if (adminContacts != null && !separateContacts) {
@@ -247,7 +257,7 @@ public class ClubDiscoveryService {
         saveSkip(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         
-        confirmAndCheckNext(user, update, confirmation);
+        confirmAndCheckNext(user, update, confirmation, buildSkipButtons(targetChatid));
         userRepository.save(user);
     }
 
@@ -273,7 +283,12 @@ public class ClubDiscoveryService {
     }
 
     private void confirmAndCheckNext(User user, MessageUpdate update, String confirmation) {
-        Profile next = findNextProfile(user.getChatid());
+        confirmAndCheckNext(user, update, confirmation, List.of(List.of(new Button("✨ Ver siguiente", CALLBACK_NEXT))));
+    }
+
+    private void confirmAndCheckNext(User user, MessageUpdate update, String confirmation,
+            List<List<Button>> buttons) {
+        Profile next = findCandidates(user.getChatid()).stream().findFirst().orElse(null);
         if (next == null) {
             deletePreviousProfileMessage(user);
             deleteCurrentProfileMessage(user);
@@ -283,18 +298,53 @@ public class ClubDiscoveryService {
             user.setMediaGroupMessageIds(null);
 
             String notice = confirmation + "\n\n" + noProfilesNotice();
-            sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
+            sendEmptyNotice(update.getChatid(), notice);
             user.setComando(STATE_NO_PROFILES);
         } else {
-            List<List<Button>> buttons = List.of(List.of(new Button("✨ Ver siguiente", CALLBACK_NEXT)));
             sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
         }
     }
 
-    private Profile findNextProfile(String currentChatid) {
+    private List<List<Button>> buildSkipButtons(String targetChatid) {
+        return List.of(
+                List.of(new Button("↩️ Deshacer", CALLBACK_UNDO_SKIP_PREFIX + targetChatid)),
+                List.of(new Button("✨ Ver siguiente", CALLBACK_NEXT)));
+    }
+
+    /**
+     * Removes the skip made from the confirmation message and shows that profile again.
+     *
+     * @param user   the current user
+     * @param update the Telegram update
+     */
+    public void handleUndoSkip(User user, MessageUpdate update) {
+        String targetChatid = extractTargetChatid(update.getText(), CALLBACK_UNDO_SKIP_PREFIX);
+        SkippedProfile skipped = skippedProfileRepository.findByFromChatidAndToChatid(user.getChatid(), targetChatid);
+        if (skipped != null) {
+            skippedProfileRepository.delete(skipped);
+        }
+
+        List<Profile> candidates = findCandidates(user.getChatid());
+        Profile target = candidates.stream()
+                .filter(p -> p.getChatid().equals(targetChatid))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            showNextProfile(user, update);
+            return;
+        }
+        showProfile(user, update, target, candidates.size());
+    }
+
+    private void sendEmptyNotice(String chatid, String notice) {
+        sender.send(chatid, notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false,
+                List.of(List.of(new Button("🏠 Volver al inicio", "/start"))));
+    }
+
+    private List<Profile> findCandidates(String currentChatid) {
         Profile currentProfile = profileRepository.findByChatid(currentChatid);
         if (currentProfile == null) {
-            return null;
+            return List.of();
         }
 
         List<Profile> approved = profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(STATUS_APPROVED,
@@ -315,8 +365,7 @@ public class ClubDiscoveryService {
                 .filter(p -> !alreadyLiked.contains(p.getChatid()))
                 .filter(p -> !activeSkips.contains(p.getChatid()))
                 .filter(p -> isActiveUser(p.getChatid()))
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 
     private boolean matchesCity(Profile viewer, Profile target) {
@@ -509,7 +558,8 @@ public class ClubDiscoveryService {
     }
 
     private String noProfilesNotice() {
-        return "✨ No hay más personas por ahora. Volvé más tarde para descubrir nuevas conexiones.\n\n"
+        return "🌙 ¡Ya viste a todas las personas por ahora!\n"
+                + "Volvé más tarde: se suman perfiles nuevos todo el tiempo.\n\n"
                 + "🕒 Actualizado: " + LocalTime.now().format(NOTICE_TIME_FORMAT);
     }
 

@@ -591,7 +591,7 @@ class ClubDiscoveryServiceTest {
         InOrder messages = inOrder(sender);
         messages.verify(sender).deleteMessage(VIEWER_CHATID, 100);
         messages.verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.contains("Actualizado:"),
-                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false));
+                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false), any(List.class));
         assertThat(user.getCurrentProfileMessageId()).isNull();
     }
 
@@ -610,7 +610,56 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         verify(sender, never()).send(eq(VIEWER_CHATID), anyString(), eq("discovery_empty"), eq((String) null),
-                eq((String) null), eq(false));
+                eq((String) null), eq(false), any(List.class));
+    }
+
+    @Test
+    void shouldOfferUndoButtonAfterSkip() {
+        User user = newUser(ClubDiscoveryService.STATE_BROWSING);
+        user.setCurrentProfileMessageId(201);
+        MessageUpdate update = newUpdate("club_skip_" + TARGET_CHATID, null);
+        update.setMessageId(201);
+        Profile target = approvedProfile(TARGET_CHATID);
+
+        when(profileRepository.findByChatid(TARGET_CHATID)).thenReturn(target);
+        when(skippedProfileRepository.findByFromChatidAndToChatid(VIEWER_CHATID, TARGET_CHATID)).thenReturn(null);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mockNextProfileAvailable();
+
+        service.handle(user, update);
+
+        verify(sender).editCaption(eq(VIEWER_CHATID), eq(201), anyString(), eq(List.of(
+                List.of(new Button("↩️ Deshacer", "club_undo_skip_" + TARGET_CHATID)),
+                List.of(new Button("✨ Ver siguiente", ClubDiscoveryService.CALLBACK_NEXT)))));
+    }
+
+    @Test
+    void shouldUndoSkipAndShowSkippedProfileAgain() {
+        User user = newUser(ClubDiscoveryService.STATE_BROWSING);
+        user.setCurrentProfileMessageId(201);
+        MessageUpdate update = newUpdate("club_undo_skip_" + TARGET_CHATID, null);
+        update.setMessageId(201);
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        SkippedProfile skipped = new SkippedProfile();
+        skipped.setFromChatid(VIEWER_CHATID);
+        skipped.setToChatid(TARGET_CHATID);
+
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(likeRepository.findByFromChatid(VIEWER_CHATID)).thenReturn(List.of());
+        when(skippedProfileRepository.findByFromChatidAndToChatid(VIEWER_CHATID, TARGET_CHATID)).thenReturn(skipped);
+        when(skippedProfileRepository.findByFromChatidAndExpiresAtMsAfter(anyString(), org.mockito.ArgumentMatchers.anyLong())).thenReturn(List.of());
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(java.util.Optional.of(newUser(ClubDiscoveryService.STATE_BROWSING)));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.handle(user, update);
+
+        verify(skippedProfileRepository).delete(skipped);
+        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.contains("Quedan 1 personas por ver"),
+                eq("discovery_profile"), any(), any(), eq(false), any(List.class), any(), any());
     }
 
     private void mockNextProfileAvailable() {
@@ -693,7 +742,7 @@ class ClubDiscoveryServiceTest {
 
         assertThat(user.getCurrentProfileMessageId()).isNull();
         verify(sender, never()).editCaption(anyString(), anyInt(), anyString(), org.mockito.ArgumentMatchers.anyList());
-        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("👋 Por ahora pasaste el perfil de Laura.\n\n✨ No hay más personas"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false));
+        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("👋 Por ahora pasaste el perfil de Laura.\n\n🌙 ¡Ya viste"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false), any(List.class));
     }
 
     @Test
@@ -895,7 +944,7 @@ class ClubDiscoveryServiceTest {
 
     private void verifyEmptyDiscoveryNoticeIsSent() {
         verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.contains("Actualizado:"),
-                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false));
+                eq("discovery_empty"), eq((String) null), eq((String) null), eq(false), any(List.class));
     }
 
 }
