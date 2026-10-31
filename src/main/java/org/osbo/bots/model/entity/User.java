@@ -60,8 +60,8 @@ public class User {
     private Integer photoEditPromptMessageId;
 
     /**
-     * Pipe-separated Telegram message IDs of the media group photos currently
-     * shown in discovery. Used to delete all photos when advancing to the next profile.
+     * Pipe-separated Telegram message IDs of auxiliary discovery messages,
+     * including media group photos and overflow contact details.
      */
     @Column(name = "media_group_message_ids")
     private String mediaGroupMessageIds;

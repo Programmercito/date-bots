@@ -35,4 +35,16 @@ class TelegramPresentationTest {
         assertThat(TelegramPresentation.decorate("🌷", "A", "B", 4)).isEqualTo("A🌷B");
         assertThat(TelegramPresentation.decorate("🌷", "A", "B", 3)).isEqualTo("🌷");
     }
+
+    @Test
+    void shouldSplitTextWithoutBreakingEmojiOrLosingContent() {
+        String text = "a".repeat(4095) + "🌷" + "b".repeat(10);
+
+        var parts = TelegramPresentation.splitText(text);
+
+        assertThat(parts).hasSize(2).allSatisfy(part -> assertThat(part.length()).isLessThanOrEqualTo(4096));
+        assertThat(parts.get(0)).hasSize(4095);
+        assertThat(parts.get(1)).startsWith("🌷");
+        assertThat(String.join("", parts)).isEqualTo(text);
+    }
 }

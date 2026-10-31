@@ -223,6 +223,14 @@ public class ReceiverForSend {
                     user.setCurrentProfileMessageId(id);
                     userService.save(user);
                 }
+            } else if ("discovery_extra".equals(message.getTipo())) {
+                User user = userService.findById(message.getChatid());
+                if (user != null) {
+                    String ids = user.getMediaGroupMessageIds();
+                    String id = String.valueOf(response.message().messageId());
+                    user.setMediaGroupMessageIds(ids == null || ids.isBlank() ? id : ids + "|" + id);
+                    userService.save(user);
+                }
             }
             System.out.println("Mensaje enviado");
         } else {

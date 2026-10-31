@@ -15,6 +15,7 @@ import org.osbo.bots.model.entity.Report;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.entity.UserPlan;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
@@ -186,6 +187,33 @@ class RepositoryTests {
         assertThat(matches)
                 .allMatch(like -> like.isMatched()
                         && (a.equals(like.getFromChatid()) || a.equals(like.getToChatid())));
+    }
+
+    @Test
+    void shouldPageOnlyLikesReceivedByTheRequestedUser() {
+        String admin = randomChatid();
+        String other = randomChatid();
+        Like first = createLike(randomChatid(), admin, "2026-01-01T10:00:00Z", false);
+        Like second = createLike(randomChatid(), admin, "2026-01-02T10:00:00Z", true);
+        Like third = createLike(randomChatid(), admin, "2026-01-02T10:00:00Z", false);
+        createLike(admin, other, "2026-01-03T10:00:00Z", false);
+        createLike(randomChatid(), other, "2026-01-04T10:00:00Z", false);
+
+        var page = likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(0, 2));
+
+        assertThat(page.getTotalElements()).isEqualTo(3);
+        assertThat(page.getContent()).extracting(Like::getId).containsExactly(third.getId(), second.getId());
+        assertThat(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(1, 2))
+                .getContent()).extracting(Like::getId).containsExactly(first.getId());
+    }
+
+    private Like createLike(String from, String to, String createdAt, boolean matched) {
+        Like like = new Like();
+        like.setFromChatid(from);
+        like.setToChatid(to);
+        like.setCreatedAt(createdAt);
+        like.setMatched(matched);
+        return likeRepository.saveAndFlush(like);
     }
 
     @Test

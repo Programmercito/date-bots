@@ -584,12 +584,12 @@ public class ClubRegistrationService {
         List<List<Button>> buttons = buildContactButtons(username);
         if (username != null && !username.isBlank()) {
             sender.send(chatid,
-                    "Para que tus matches puedan contactarte, confirmá tu usuario de Telegram o enviá tu número de WhatsApp.\nTu usuario actual: @"
+                    "Tus matches y el equipo de administración pueden ver tus contactos. Confirmá tu usuario de Telegram o enviá tu número de WhatsApp.\nTu usuario actual: @"
                             + username,
                     true, buttons);
         } else {
             sender.send(chatid,
-                    "Para que tus matches puedan contactarte, enviá tu número de WhatsApp.",
+                    "Tus matches y el equipo de administración pueden ver tus contactos. Enviá tu número de WhatsApp.",
                     true, buttons);
         }
     }

@@ -2,6 +2,7 @@ package org.osbo.bots.jms.queue.receiver;
 
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
@@ -10,6 +11,7 @@ import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.AdminBroadcastService;
+import org.osbo.bots.model.services.AdminReceivedLikesService;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
 import org.osbo.bots.model.services.ClubProfileEditService;
@@ -38,6 +40,7 @@ public class ReceiverForProcess {
     ClubProfileEditService clubProfileEditService;
     LikeMatchService likeMatchService;
     AdminBroadcastService adminBroadcastService;
+    AdminReceivedLikesService adminReceivedLikesService;
 
     @Value("${telegram.horario.inicio}")
     private String inicio;
@@ -57,7 +60,8 @@ public class ReceiverForProcess {
     ReceiverForProcess(NqueueForSend sender, UserService userService, MessageService messageService,
             ClubRegistrationService clubRegistrationService, ClubModerationService clubModerationService,
             ClubDiscoveryService clubDiscoveryService, ClubProfileEditService clubProfileEditService,
-            LikeMatchService likeMatchService, AdminBroadcastService adminBroadcastService) {
+            LikeMatchService likeMatchService, AdminBroadcastService adminBroadcastService,
+            AdminReceivedLikesService adminReceivedLikesService) {
         this.messageService = messageService;
         this.userService = userService;
         this.sender = sender;
@@ -67,6 +71,7 @@ public class ReceiverForProcess {
         this.clubProfileEditService = clubProfileEditService;
         this.likeMatchService = likeMatchService;
         this.adminBroadcastService = adminBroadcastService;
+        this.adminReceivedLikesService = adminReceivedLikesService;
     }
 
     @JmsListener(destination = "queue.process", containerFactory = "myFactory")
@@ -94,6 +99,10 @@ public class ReceiverForProcess {
             return;
         }
         if (handleModerationCommand(update)) {
+            userService.save(user);
+            return;
+        }
+        if (adminReceivedLikesService.handle(update.getChatid(), update.getText())) {
             userService.save(user);
             return;
         }
@@ -271,13 +280,16 @@ public class ReceiverForProcess {
     }
 
     private void showStartMenu(User user, MessageUpdate update) {
-        List<List<Button>> buttons = Arrays.asList(
+        List<List<Button>> buttons = new ArrayList<>(Arrays.asList(
                 Arrays.asList(new Button("✏️ Publicar", "/publicar"),
                         new Button("📢 Ver canal", "/ver_canal")),
                 Arrays.asList(new Button("🤝 Entrar al club de amistad", "/club")),
                 Arrays.asList(new Button("👥 Ver personas", "/ver_personas"),
                         new Button("💕 Mis matches", "/mis_matches")),
-                Arrays.asList(new Button("✏️ Editar perfil", "/editar_perfil")));
+                Arrays.asList(new Button("✏️ Editar perfil", "/editar_perfil"))));
+        if (adminid.equals(update.getChatid())) {
+            buttons.add(List.of(new Button("💌 Likes que recibí", AdminReceivedLikesService.COMMAND)));
+        }
         sender.send(update.getChatid(),
                 "🌷 ¡Bienvenid@ a nuestra comunidad de amistad en Bolivia! 🇧🇴\n\n"
                 + "💌 Compartí un mensaje en el canal para que otras personas puedan conocerte.\n"

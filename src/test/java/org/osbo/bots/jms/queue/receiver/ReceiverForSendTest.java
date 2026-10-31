@@ -189,6 +189,29 @@ class ReceiverForSendTest {
     }
 
     @Test
+    void shouldTrackExtraDiscoveryMessagesForLaterCleanup() {
+        User viewer = new User();
+        viewer.setChatid(VIEWER_CHATID);
+        viewer.setMediaGroupMessageIds("10|11");
+        when(userService.findById(VIEWER_CHATID)).thenReturn(viewer);
+        SendResponse response = mock(SendResponse.class);
+        com.pengrad.telegrambot.model.Message sent = mock(com.pengrad.telegrambot.model.Message.class);
+        when(response.isOk()).thenReturn(true);
+        when(response.message()).thenReturn(sent);
+        when(sent.messageId()).thenReturn(12);
+        when(bot.execute(any(SendMessage.class))).thenReturn(response);
+        MessageSend message = new MessageSend();
+        message.setChatid(VIEWER_CHATID);
+        message.setTipo("discovery_extra");
+        message.setText("Contacto para administración");
+
+        receiver.sendMessage(message);
+
+        assertThat(viewer.getMediaGroupMessageIds()).isEqualTo("10|11|12");
+        verify(userService).save(viewer);
+    }
+
+    @Test
     void shouldUpdateCurrentProfileMessageIdOnSuccessfulEmptyDiscoveryNotice() {
         User viewer = new User();
         viewer.setChatid(VIEWER_CHATID);

@@ -87,6 +87,7 @@ src/main/java/org/osbo/bots/
 | `/rechazar_perfil_<chatid>` | "❌ Rechazar" | Reject a friendship-club profile |
 | `/enviar_todos <texto>` | — | Admin only | Broadcast text to every user |
 | `/enviar_canal <texto>` | — | Admin only | Post text to the channel at any time |
+| `/likes_recibidos_admin` | "💌 Likes que recibí" | Show the configured admin's received likes and available contacts |
 
 ## 5. Bot State Machine
 
@@ -190,6 +191,10 @@ storage and is sent as plain text; the contact button is preserved.
 - "Relación informal" → `INFORMAL_RELATIONSHIP`
 
 Labels are translated from the stored code by `LookingForOption.translate(code)` so users never see raw values.
+
+The configured administrator can see available Telegram and WhatsApp contacts
+while browsing profiles and in their received-likes list, even without a match.
+Other users only receive contact details after a mutual match.
 
 **Broken/expired photo `file_id` handling:**
 
@@ -309,5 +314,5 @@ Still to implement:
 
 - Do not call `clubRegistrationService.handle()` inside the `if ("start".equals(comando))` block — registration states are `club_register_*` and must be handled before the main state switch.
 - Do not store photos on disk; use Telegram `file_id` only.
-- Do not expose contact info before a mutual match.
+- Do not expose contact info before a mutual match, except to the configured administrator during discovery.
 - Remember that SQLite allows only one writer at a time; put writes in short transactions.

@@ -27,6 +27,7 @@ import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.LookingForOption;
 import org.osbo.bots.util.MarkdownEscaper;
 import org.osbo.bots.util.TelegramPresentation;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -66,6 +67,7 @@ public class ClubDiscoveryService {
 
     private static final String SEND_TYPE_DISCOVERY_PROFILE = "discovery_profile";
     private static final String SEND_TYPE_DISCOVERY_EMPTY = "discovery_empty";
+    private static final String SEND_TYPE_DISCOVERY_EXTRA = "discovery_extra";
     private static final DateTimeFormatter NOTICE_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private final NqueueForSend sender;
@@ -75,10 +77,12 @@ public class ClubDiscoveryService {
     private final ReportRepository reportRepository;
     private final SkippedProfileRepository skippedProfileRepository;
     private final JmsTemplate jmsTemplate;
+    private final String adminChatid;
 
     public ClubDiscoveryService(NqueueForSend sender, ProfileRepository profileRepository,
             UserRepository userRepository, LikeRepository likeRepository,
-            ReportRepository reportRepository, SkippedProfileRepository skippedProfileRepository, JmsTemplate jmsTemplate) {
+            ReportRepository reportRepository, SkippedProfileRepository skippedProfileRepository, JmsTemplate jmsTemplate,
+            @Value("${telegram.admin}") String adminChatid) {
         this.sender = sender;
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
@@ -86,6 +90,7 @@ public class ClubDiscoveryService {
         this.reportRepository = reportRepository;
         this.skippedProfileRepository = skippedProfileRepository;
         this.jmsTemplate = jmsTemplate;
+        this.adminChatid = adminChatid;
     }
 
     /**
@@ -169,6 +174,16 @@ public class ClubDiscoveryService {
 
         user.setComando(STATE_BROWSING);
         String caption = buildProfileCaption(next);
+        List<String> photos = next.getPhotoList();
+        boolean isAdmin = adminChatid.equals(user.getChatid()) && adminChatid.equals(update.getChatid());
+        String adminContacts = isAdmin ? buildAdminContacts(next, true) : null;
+        int messageLimit = photos.size() > 1 || photos.isEmpty()
+                ? TelegramPresentation.TEXT_LIMIT : TelegramPresentation.CAPTION_LIMIT;
+        boolean separateContacts = adminContacts != null
+                && (long) caption.length() + adminContacts.length() > messageLimit;
+        if (adminContacts != null && !separateContacts) {
+            caption += adminContacts;
+        }
         List<List<Button>> buttons = buildProfileButtons(next);
         deletePreviousProfileMessage(user);
         deleteCurrentProfileMessage(user);
@@ -176,13 +191,15 @@ public class ClubDiscoveryService {
         user.setPreviousProfileMessageId(null);
         user.setCurrentProfileMessageId(null);
         user.setMediaGroupMessageIds(null);
-        List<String> photos = next.getPhotoList();
         if (photos.size() > 1) {
             sender.sendMediaGroup(update.getChatid(), photos.toArray(new String[0]), next.getChatid());
             sender.sendDiscoveryButtons(update.getChatid(), caption, buttons, next.getChatid());
         } else {
             sender.send(update.getChatid(), caption, SEND_TYPE_DISCOVERY_PROFILE, next.getPhotoFileId(), null, false,
                     buttons, next.getChatid(), "Markdown");
+        }
+        if (separateContacts) {
+            sendAdminContacts(update.getChatid(), buildAdminContacts(next, false));
         }
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
         userRepository.save(user);
@@ -349,6 +366,26 @@ public class ClubDiscoveryService {
                 + "*💘 Buscando:* " + MarkdownEscaper.escape(LookingForOption.translate(profile.getLookingFor()));
         return TelegramPresentation.decorate(caption, "✨ *Una nueva conexión* ✨\n\n", "",
                 TelegramPresentation.CAPTION_LIMIT);
+    }
+
+    private String buildAdminContacts(Profile profile, boolean markdown) {
+        String username = profile.getContactUsername();
+        String whatsapp = profile.getWhatsapp();
+        String telegram = username == null || username.isBlank() ? "No disponible" : "@" + username;
+        String phone = whatsapp == null || whatsapp.isBlank() ? "No disponible" : whatsapp;
+        if (markdown) {
+            return "\n\n*🛡️ Contacto para administración*\n"
+                    + "*✈️ Telegram:* " + MarkdownEscaper.escape(telegram) + "\n"
+                    + "*📱 WhatsApp:* " + MarkdownEscaper.escape(phone);
+        }
+        return "🛡️ Contacto para administración\n"
+                + "✈️ Telegram: " + telegram + "\n📱 WhatsApp: " + phone;
+    }
+
+    private void sendAdminContacts(String chatid, String contacts) {
+        for (String part : TelegramPresentation.splitText(contacts)) {
+            sender.send(chatid, part, SEND_TYPE_DISCOVERY_EXTRA, null, null, false, null);
+        }
     }
 
     private List<List<Button>> buildProfileButtons(Profile profile) {

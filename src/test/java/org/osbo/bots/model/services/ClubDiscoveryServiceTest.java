@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +44,7 @@ class ClubDiscoveryServiceTest {
 
     private static final String VIEWER_CHATID = "viewer-123";
     private static final String TARGET_CHATID = "target-456";
+    private static final String ADMIN_CHATID = "admin-999";
 
     private NqueueForSend sender;
     private ProfileRepository profileRepository;
@@ -63,7 +65,7 @@ class ClubDiscoveryServiceTest {
         skippedProfileRepository = mock(SkippedProfileRepository.class);
         jmsTemplate = mock(JmsTemplate.class);
         service = new ClubDiscoveryService(sender, profileRepository, userRepository, likeRepository,
-                reportRepository, skippedProfileRepository, jmsTemplate);
+                reportRepository, skippedProfileRepository, jmsTemplate, ADMIN_CHATID);
     }
 
     @Test
@@ -162,6 +164,174 @@ class ClubDiscoveryServiceTest {
         assertThat(buttons.getValue().stream().flatMap(List::stream).map(Button::getCallbackData))
                 .containsExactly("club_like_" + TARGET_CHATID, "club_skip_" + TARGET_CHATID,
                         "club_report_" + TARGET_CHATID);
+    }
+
+    @Test
+    void shouldShowBothEscapedContactsToConfiguredAdmin() {
+        Profile target = discoveryTarget();
+        target.setContactUsername("ana_test");
+        target.setWhatsapp("+591 70012345");
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> caption = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(ADMIN_CHATID), caption.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(TARGET_CHATID), eq("Markdown"));
+        assertThat(caption.getValue()).contains("*🛡️ Contacto para administración*",
+                "*✈️ Telegram:* @ana\\_test", "*📱 WhatsApp:* +591 70012345");
+        verify(sender, never()).send(eq(ADMIN_CHATID), anyString(), eq("discovery_extra"),
+                eq((String) null), eq((String) null), eq(false), any());
+    }
+
+    @Test
+    void shouldShowUnavailableContactMethodsToAdmin() {
+        Profile target = discoveryTarget();
+        target.setContactUsername(null);
+        target.setWhatsapp(" ");
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> caption = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(ADMIN_CHATID), caption.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(TARGET_CHATID), eq("Markdown"));
+        assertThat(caption.getValue()).contains("*✈️ Telegram:* No disponible", "*📱 WhatsApp:* No disponible");
+    }
+
+    @Test
+    void shouldShowAdminContactsInProfileWithoutPhoto() {
+        Profile target = discoveryTarget();
+        target.setPhotoFileId(null);
+        target.setContactUsername("person");
+        target.setWhatsapp("+59170012345");
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(ADMIN_CHATID), text.capture(), eq("discovery_profile"), eq((String) null),
+                eq((String) null), eq(false), any(List.class), eq(TARGET_CHATID), eq("Markdown"));
+        assertThat(text.getValue()).contains("@person", "+59170012345");
+    }
+
+    @Test
+    void shouldShowAdminContactsInTheMultiPhotoProfileMessage() {
+        Profile target = discoveryTarget();
+        target.setPhotoFileIds("photo-one|photo-two");
+        target.setContactUsername("person");
+        target.setWhatsapp("+59170012345");
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(sender).sendMediaGroup(eq(ADMIN_CHATID), any(String[].class), eq(TARGET_CHATID));
+        verify(sender).sendDiscoveryButtons(eq(ADMIN_CHATID), text.capture(), any(List.class), eq(TARGET_CHATID));
+        assertThat(text.getValue()).contains("@person", "+59170012345");
+    }
+
+    @Test
+    void shouldKeepMultiPhotoContactsHiddenFromOtherUsersEvenWithAdminUsername() {
+        Profile target = discoveryTarget();
+        target.setPhotoFileIds("photo-one|photo-two");
+        target.setContactUsername("private_person");
+        target.setWhatsapp("+59170012345");
+        User viewer = prepareDiscovery(VIEWER_CHATID, target);
+        MessageUpdate update = viewUpdate(VIEWER_CHATID);
+        update.setUser("admin-999");
+
+        service.handle(viewer, update);
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(sender).sendDiscoveryButtons(eq(VIEWER_CHATID), text.capture(), any(List.class), eq(TARGET_CHATID));
+        assertThat(text.getValue()).doesNotContain("private_person", "+59170012345", "Contacto para administración");
+    }
+
+    @Test
+    void shouldNotSendContactsIfRecipientIsNotTheAdmin() {
+        Profile target = discoveryTarget();
+        target.setContactUsername("private_person");
+        target.setWhatsapp("+59170012345");
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.showNextProfile(admin, viewUpdate(VIEWER_CHATID));
+
+        ArgumentCaptor<String> caption = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(VIEWER_CHATID), caption.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(TARGET_CHATID), eq("Markdown"));
+        assertThat(caption.getValue()).doesNotContain("private_person", "+59170012345");
+    }
+
+    @Test
+    void shouldSendContactsSeparatelyWhenTheyDoNotFitPhotoCaption() {
+        Profile target = discoveryTarget();
+        target.setDescription("x".repeat(850));
+        target.setContactUsername("ana_test");
+        target.setWhatsapp("7".repeat(160));
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> caption = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> contacts = ArgumentCaptor.forClass(String.class);
+        verify(sender).send(eq(ADMIN_CHATID), caption.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), any(List.class), eq(TARGET_CHATID), eq("Markdown"));
+        verify(sender).send(eq(ADMIN_CHATID), contacts.capture(), eq("discovery_extra"),
+                eq((String) null), eq((String) null), eq(false), eq((List<List<Button>>) null));
+        assertThat(caption.getValue().length()).isLessThanOrEqualTo(1024);
+        assertThat(contacts.getValue()).contains("@ana_test", "7".repeat(160));
+    }
+
+    @Test
+    void shouldSplitVeryLongAdminContactsWithoutLosingInformation() {
+        Profile target = discoveryTarget();
+        target.setContactUsername("person");
+        target.setWhatsapp("7".repeat(4090));
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        ArgumentCaptor<String> contacts = ArgumentCaptor.forClass(String.class);
+        verify(sender, times(2)).send(eq(ADMIN_CHATID), contacts.capture(), eq("discovery_extra"),
+                eq((String) null), eq((String) null), eq(false), eq((List<List<Button>>) null));
+        assertThat(contacts.getAllValues()).allSatisfy(part -> assertThat(part.length()).isLessThanOrEqualTo(4096));
+        assertThat(String.join("", contacts.getAllValues())).contains("@person", "7".repeat(4090));
+    }
+
+    @Test
+    void shouldDeleteTrackedExtraContactMessagesWhenShowingNextProfile() {
+        Profile target = discoveryTarget();
+        User admin = prepareDiscovery(ADMIN_CHATID, target);
+        admin.setMediaGroupMessageIds("23|24");
+
+        service.handle(admin, viewUpdate(ADMIN_CHATID));
+
+        verify(sender).deleteMessage(ADMIN_CHATID, 23);
+        verify(sender).deleteMessage(ADMIN_CHATID, 24);
+        assertThat(admin.getMediaGroupMessageIds()).isNull();
+    }
+
+    private Profile discoveryTarget() {
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        return target;
+    }
+
+    private User prepareDiscovery(String chatid, Profile target) {
+        User user = newUser("start");
+        user.setChatid(chatid);
+        when(profileRepository.findByChatid(chatid)).thenReturn(approvedProfile(chatid));
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(Optional.of(activeUser(TARGET_CHATID)));
+        return user;
+    }
+
+    private MessageUpdate viewUpdate(String chatid) {
+        MessageUpdate update = newUpdate("/ver_personas", null);
+        update.setChatid(chatid);
+        return update;
     }
 
     @Test

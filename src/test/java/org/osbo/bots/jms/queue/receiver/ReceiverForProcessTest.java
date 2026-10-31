@@ -20,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.services.AdminBroadcastService;
+import org.osbo.bots.model.services.AdminReceivedLikesService;
 import org.osbo.bots.model.services.ClubDiscoveryService;
 import org.osbo.bots.model.services.ClubModerationService;
 import org.osbo.bots.model.services.ClubProfileEditService;
@@ -41,6 +42,7 @@ class ReceiverForProcessTest {
     private ClubProfileEditService clubProfileEditService;
     private LikeMatchService likeMatchService;
     private AdminBroadcastService adminBroadcastService;
+    private AdminReceivedLikesService adminReceivedLikesService;
     private ReceiverForProcess receiver;
 
     @BeforeEach
@@ -54,9 +56,10 @@ class ReceiverForProcessTest {
         clubProfileEditService = mock(ClubProfileEditService.class);
         likeMatchService = mock(LikeMatchService.class);
         adminBroadcastService = mock(AdminBroadcastService.class);
+        adminReceivedLikesService = mock(AdminReceivedLikesService.class);
         receiver = new ReceiverForProcess(sender, userService, messageService, clubRegistrationService,
                 clubModerationService, clubDiscoveryService, clubProfileEditService, likeMatchService,
-                adminBroadcastService);
+                adminBroadcastService, adminReceivedLikesService);
         ReflectionTestUtils.setField(receiver, "adminid", "admin-999");
     }
 
@@ -175,6 +178,41 @@ class ReceiverForProcessTest {
         org.assertj.core.api.Assertions.assertThat(buttons.getValue().stream().flatMap(List::stream)
                 .map(Button::getCallbackData))
                 .containsExactly("/publicar", "/ver_canal", "/club", "/ver_personas", "/mis_matches", "/editar_perfil");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldShowReceivedLikesButtonOnlyToAdmin() {
+        User user = newUser("start");
+        user.setChatid("admin-999");
+        MessageUpdate update = newUpdate("/start");
+        update.setChatid("admin-999");
+        when(userService.findById("admin-999")).thenReturn(user);
+
+        receiver.sendMessage(update);
+
+        ArgumentCaptor<List<List<Button>>> buttons = ArgumentCaptor.forClass(List.class);
+        verify(sender).send(eq("admin-999"), anyString(), eq(true), buttons.capture());
+        org.assertj.core.api.Assertions.assertThat(buttons.getValue().stream().flatMap(List::stream)
+                .map(Button::getCallbackData)).contains(AdminReceivedLikesService.COMMAND);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "/likes_recibidos_admin", "admin_likes_page_1"
+    })
+    void shouldRouteReceivedLikesBeforeOtherConversationStates(String text) {
+        User user = newUser("club_edit_name");
+        MessageUpdate update = newUpdate(text);
+        when(userService.findById(CHATID)).thenReturn(user);
+        when(adminReceivedLikesService.handle(CHATID, text)).thenReturn(true);
+
+        receiver.sendMessage(update);
+
+        verify(adminReceivedLikesService).handle(CHATID, text);
+        verify(clubProfileEditService, org.mockito.Mockito.never()).handle(user, update);
+        verify(userService).save(user);
+        org.assertj.core.api.Assertions.assertThat(user.getComando()).isEqualTo("club_edit_name");
     }
 
     @Test
