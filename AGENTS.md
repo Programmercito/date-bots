@@ -148,6 +148,10 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 5. Admin approves → message is posted to `telegram.channel`.
 6. After 1 hour, `DeleteVencidos` deletes the channel message.
 
+Opening and closing announcements promote the club with a freshly calculated
+count of approved Bolivian profiles whose user exists and is not blocked.
+Paused profiles are excluded; the published count is a snapshot, not a live counter.
+
 Channel posts receive a short decorative header and footer when they fit
 Telegram's text or photo-caption limit. The submitted text remains unchanged in
 storage and is sent as plain text; the contact button is preserved.

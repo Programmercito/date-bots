@@ -83,6 +83,46 @@ class RepositoryTests {
     }
 
     @Test
+    void shouldCountOnlyApprovedBolivianProfilesWithUnblockedUsers() {
+        assertThat(profileRepository.countDiscoverableProfiles("APPROVED", "BO", "bloqueado")).isZero();
+        Profile visible = saveProfileWithUser("APPROVED", "BO", "activo");
+        saveProfileWithUser("APPROVED", "BO", null);
+        saveProfileWithUser("PAUSED", "BO", "activo");
+        saveProfileWithUser("PENDING", "BO", "activo");
+        saveProfileWithUser("REJECTED", "BO", "activo");
+        saveProfileWithUser("APPROVED", "BO", "bloqueado");
+        saveProfileWithUser("APPROVED", "PE", "activo");
+        Profile withoutUser = new Profile();
+        withoutUser.setChatid(randomChatid());
+        withoutUser.setStatus("APPROVED");
+        withoutUser.setCountry("BO");
+        profileRepository.saveAndFlush(withoutUser);
+
+        assertThat(profileRepository.countDiscoverableProfiles("APPROVED", "BO", "bloqueado")).isEqualTo(2);
+
+        visible.setStatus("PAUSED");
+        profileRepository.saveAndFlush(visible);
+        assertThat(profileRepository.countDiscoverableProfiles("APPROVED", "BO", "bloqueado")).isEqualTo(1);
+
+        visible.setStatus("APPROVED");
+        profileRepository.saveAndFlush(visible);
+        assertThat(profileRepository.countDiscoverableProfiles("APPROVED", "BO", "bloqueado")).isEqualTo(2);
+    }
+
+    private Profile saveProfileWithUser(String status, String country, String userStatus) {
+        String chatid = randomChatid();
+        User user = new User();
+        user.setChatid(chatid);
+        user.setEstado(userStatus);
+        userRepository.save(user);
+        Profile profile = new Profile();
+        profile.setChatid(chatid);
+        profile.setStatus(status);
+        profile.setCountry(country);
+        return profileRepository.saveAndFlush(profile);
+    }
+
+    @Test
     void shouldSaveAndFindProfileWithBirthDate() {
         String chatid = randomChatid();
         Profile profile = new Profile();
