@@ -69,7 +69,7 @@ src/main/java/org/osbo/bots/
 | `/start` | "Volver al inicio" | All | Main menu |
 | `/publicar` | "✏️ Publicar" | All | Publish to channel |
 | `/ver_canal` | "📢 Ver canal" | All | Show channel link |
-| `/club` | "🤝 Entrar al club de amistad" | All | Enter the friendship club |
+| `/club` | "🤝 Entrar al club" | All | Enter the friendship club |
 | `/ver_personas` | "Ver personas" | Approved profiles | Start discovery |
 | `/editar_perfil` | "Editar perfil" | Approved profiles | Edit approved profile fields |
 | `/pausar_perfil` | "Pausar perfil" | Approved profiles | Hide from discovery |
@@ -87,7 +87,7 @@ src/main/java/org/osbo/bots/
 | `/rechazar_perfil_<chatid>` | "❌ Rechazar" | Reject a friendship-club profile |
 | `/enviar_todos <texto>` | — | Admin only | Broadcast text to every user |
 | `/enviar_canal <texto>` | — | Admin only | Post text to the channel at any time |
-| `/likes_recibidos_admin` | "💌 Likes que recibí" | Show the configured admin's received likes and available contacts |
+| `/likes_enviados_admin` | "💌 Personas a las que di like" | Show people the configured admin liked and their available contacts |
 
 ## 5. Bot State Machine
 
@@ -161,7 +161,7 @@ storage and is sent as plain text; the contact button is preserved.
 
 ### 8.1 Registration
 
-1. User taps **Entrar al club de amistad** (`/club`).
+1. User taps **Entrar al club** (`/club`).
 2. Bot asks for: name, birthdate (DD/MM/AAAA), gender, orientation, city, description, tastes, traits, looking for (predefined buttons), photo.
 3. Validates:
    - Age >= 18 (calculated from birthdate).
@@ -193,7 +193,7 @@ storage and is sent as plain text; the contact button is preserved.
 Labels are translated from the stored code by `LookingForOption.translate(code)` so users never see raw values.
 
 The configured administrator can see available Telegram and WhatsApp contacts
-while browsing profiles and in their received-likes list, even without a match.
+while browsing profiles and in their sent-likes list, even without a match.
 Other users only receive contact details after a mutual match.
 
 **Broken/expired photo `file_id` handling:**

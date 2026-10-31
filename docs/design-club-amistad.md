@@ -205,7 +205,7 @@ The bot uses a state machine stored in `users.comando`.
 
 ### 8.1 Registration
 
-1. User taps **"Entrar al club de amistad"** (`/club`).
+1. User taps **"Entrar al club"** (`/club`).
 2. Bot validates the user does not already have a profile.
 3. Bot asks for `name` → state `club_register_name`.
 4. Bot asks for `age` → validate >= 18.

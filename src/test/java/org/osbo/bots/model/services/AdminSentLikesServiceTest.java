@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -25,25 +26,26 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-class AdminReceivedLikesServiceTest {
+class AdminSentLikesServiceTest {
 
     private static final String ADMIN = "admin-999";
     private static final String OTHER = "user-123";
     private LikeRepository likeRepository;
     private ProfileRepository profileRepository;
     private NqueueForSend sender;
-    private AdminReceivedLikesService service;
+    private AdminSentLikesService service;
 
     @BeforeEach
     void setUp() {
         likeRepository = mock(LikeRepository.class);
         profileRepository = mock(ProfileRepository.class);
         sender = mock(NqueueForSend.class);
-        service = new AdminReceivedLikesService(likeRepository, profileRepository, sender, ADMIN);
+        service = new AdminSentLikesService(likeRepository, profileRepository, sender, ADMIN);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/likes_recibidos_admin", "admin_likes_page_0", "admin_likes_page_1"})
+    @ValueSource(strings = {"/likes_enviados_admin", "/likes_recibidos_admin",
+            "admin_likes_page_0", "admin_likes_page_1"})
     void shouldRejectOtherUsersBeforeQueryingAnyContacts(String text) {
         assertThat(service.handle(OTHER, text)).isTrue();
 
@@ -53,10 +55,10 @@ class AdminReceivedLikesServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldShowOnlyReceivedLikesIncludingUnmatchedAndMatchedContacts() {
+    void shouldShowOnlySentLikesIncludingUnmatchedAndMatchedContacts() {
         Like unmatched = like("alice", false);
         Like matched = like("bea", true);
-        when(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
                 .thenReturn(new PageImpl<>(List.of(unmatched, matched), PageRequest.of(0, 3), 2));
         Profile alice = profile("Alicia_*", "alice_user", "+59170012345");
         alice.setAge(25);
@@ -64,23 +66,26 @@ class AdminReceivedLikesServiceTest {
         when(profileRepository.findByChatid("alice")).thenReturn(alice);
         when(profileRepository.findByChatid("bea")).thenReturn(profile("Bea", null, null));
 
-        assertThat(service.handle(ADMIN, AdminReceivedLikesService.COMMAND)).isTrue();
+        assertThat(service.handle(ADMIN, AdminSentLikesService.COMMAND)).isTrue();
 
         ArgumentCaptor<String> message = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttons = ArgumentCaptor.forClass(List.class);
         verify(sender).send(eq(ADMIN), message.capture(), buttons.capture());
-        assertThat(message.getValue()).contains("Alicia_*, 25 años", "📍 La Paz", "💌 Like recibido", "@alice_user", "+59170012345",
+        assertThat(message.getValue()).contains("Personas a las que diste like", "Alicia_*, 25 años", "📍 La Paz",
+                "💌 Like enviado", "@alice_user", "+59170012345",
                 "Bea", "💕 Match mutuo", "Telegram: No disponible", "WhatsApp: No disponible");
         assertThat(buttons.getValue().stream().flatMap(List::stream).map(Button::getCallbackData))
                 .containsExactly("/start");
-        verify(likeRepository).findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3));
+        verify(likeRepository).findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3));
+        verify(profileRepository).findByChatid("alice");
+        verify(profileRepository).findByChatid("bea");
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void shouldNavigateReceivedLikesPagesWithoutAcceptingAnotherTarget() {
+    void shouldNavigateSentLikesPagesWithoutAcceptingAnotherTarget() {
         Like like = like("alice", false);
-        when(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(1, 3)))
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(1, 3)))
                 .thenReturn(new PageImpl<>(List.of(like), PageRequest.of(1, 3), 7));
         when(profileRepository.findByChatid("alice")).thenReturn(profile("Alicia", "alice", null));
 
@@ -96,7 +101,7 @@ class AdminReceivedLikesServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"admin_likes_page_", "admin_likes_page_-1", "admin_likes_page_9999999999",
-            "admin_likes_page_1_other-user"})
+            "admin_likes_page_1_other-user", "admin_likes_page_0_user-123"})
     void shouldRejectInvalidPageCallbacksWithoutQuerying(String text) {
         assertThat(service.handle(ADMIN, text)).isTrue();
 
@@ -106,20 +111,20 @@ class AdminReceivedLikesServiceTest {
 
     @Test
     void shouldHandleNoLikesAndMissingProfiles() {
-        when(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
                 .thenReturn(Page.empty());
-        assertThat(service.handle(ADMIN, AdminReceivedLikesService.COMMAND)).isTrue();
-        verify(sender).send(ADMIN, "💌 Todavía no recibiste likes.");
+        assertThat(service.handle(ADMIN, AdminSentLikesService.COMMAND)).isTrue();
+        verify(sender).send(ADMIN, "💌 Todavía no diste likes.");
         verifyNoInteractions(profileRepository);
     }
 
     @Test
     void shouldNotRevealIdentifiersForDeletedProfiles() {
         Like like = like("deleted-user", false);
-        when(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
                 .thenReturn(new PageImpl<>(List.of(like), PageRequest.of(0, 3), 1));
 
-        service.handle(ADMIN, AdminReceivedLikesService.COMMAND);
+        service.handle(ADMIN, AdminSentLikesService.COMMAND);
 
         ArgumentCaptor<String> message = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq(ADMIN), message.capture(), any(List.class));
@@ -129,16 +134,17 @@ class AdminReceivedLikesServiceTest {
     @Test
     void shouldSplitLongContactDetailsAndKeepNavigation() {
         Like like = like("alice", false);
-        when(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
                 .thenReturn(new PageImpl<>(List.of(like), PageRequest.of(0, 3), 1));
         when(profileRepository.findByChatid("alice")).thenReturn(profile("Alicia", "alice", "7".repeat(4090)));
 
-        service.handle(ADMIN, AdminReceivedLikesService.COMMAND);
+        service.handle(ADMIN, AdminSentLikesService.COMMAND);
 
         ArgumentCaptor<String> first = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> last = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq(ADMIN), first.capture());
         verify(sender).send(eq(ADMIN), last.capture(), any(List.class));
+        verifyNoMoreInteractions(sender);
         assertThat(first.getValue().length()).isLessThanOrEqualTo(4096);
         assertThat(last.getValue().length()).isLessThanOrEqualTo(4096);
         assertThat(first.getValue() + last.getValue()).contains("@alice", "7".repeat(4090));
@@ -151,10 +157,27 @@ class AdminReceivedLikesServiceTest {
         verifyNoInteractions(likeRepository, profileRepository, sender);
     }
 
-    private Like like(String from, boolean matched) {
+    @ParameterizedTest
+    @ValueSource(strings = {"/likes_enviados_admin user-123", "/likes_recibidos_admin user-123"})
+    void shouldNotAcceptAnExtraRecipientInCommands(String text) {
+        assertThat(service.handle(ADMIN, text)).isFalse();
+        verifyNoInteractions(likeRepository, profileRepository, sender);
+    }
+
+    @Test
+    void shouldKeepOldMenuButtonsWorkingWithSentLikes() {
+        when(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(ADMIN, PageRequest.of(0, 3)))
+                .thenReturn(Page.empty());
+
+        assertThat(service.handle(ADMIN, "/likes_recibidos_admin")).isTrue();
+
+        verify(sender).send(ADMIN, "💌 Todavía no diste likes.");
+    }
+
+    private Like like(String to, boolean matched) {
         Like like = new Like();
-        like.setFromChatid(from);
-        like.setToChatid(ADMIN);
+        like.setFromChatid(ADMIN);
+        like.setToChatid(to);
         like.setMatched(matched);
         return like;
     }

@@ -16,7 +16,7 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     List<Like> findByFromChatid(String fromChatid);
 
-    Page<Like> findByToChatidOrderByCreatedAtDescIdDesc(String toChatid, Pageable pageable);
+    Page<Like> findByFromChatidOrderByCreatedAtDescIdDesc(String fromChatid, Pageable pageable);
 
     @Query("SELECT l FROM LikeEntity l WHERE (l.fromChatid = :chatid OR l.toChatid = :chatid) AND l.matched = true")
     List<Like> findByFromChatidOrToChatidAndMatchedTrue(String chatid);

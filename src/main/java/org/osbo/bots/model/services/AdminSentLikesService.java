@@ -16,9 +16,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AdminReceivedLikesService {
+public class AdminSentLikesService {
 
-    public static final String COMMAND = "/likes_recibidos_admin";
+    public static final String COMMAND = "/likes_enviados_admin";
+    private static final String LEGACY_COMMAND = "/likes_recibidos_admin";
     public static final String PAGE_PREFIX = "admin_likes_page_";
     private static final int PAGE_SIZE = 3;
 
@@ -27,7 +28,7 @@ public class AdminReceivedLikesService {
     private final NqueueForSend sender;
     private final String adminChatid;
 
-    public AdminReceivedLikesService(LikeRepository likeRepository, ProfileRepository profileRepository,
+    public AdminSentLikesService(LikeRepository likeRepository, ProfileRepository profileRepository,
             NqueueForSend sender, @Value("${telegram.admin}") String adminChatid) {
         this.likeRepository = likeRepository;
         this.profileRepository = profileRepository;
@@ -36,7 +37,8 @@ public class AdminReceivedLikesService {
     }
 
     public boolean handle(String callerChatid, String text) {
-        if (!COMMAND.equals(text) && (text == null || !text.startsWith(PAGE_PREFIX))) {
+        if (!COMMAND.equals(text) && !LEGACY_COMMAND.equals(text)
+                && (text == null || !text.startsWith(PAGE_PREFIX))) {
             return false;
         }
         if (!adminChatid.equals(callerChatid)) {
@@ -45,10 +47,10 @@ public class AdminReceivedLikesService {
         }
 
         int page = 0;
-        if (!COMMAND.equals(text)) {
+        if (!COMMAND.equals(text) && !LEGACY_COMMAND.equals(text)) {
             String pageText = text.substring(PAGE_PREFIX.length());
             if (!pageText.matches("[0-9]{1,9}")) {
-                sender.send(callerChatid, "No se pudo abrir esa página. Volvé a /likes_recibidos_admin.");
+                sender.send(callerChatid, "No se pudo abrir esa página. Volvé a /likes_enviados_admin.");
                 return true;
             }
             page = Integer.parseInt(pageText);
@@ -58,19 +60,19 @@ public class AdminReceivedLikesService {
     }
 
     private void showPage(int pageNumber) {
-        Page<Like> likes = likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(
+        Page<Like> likes = likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(
                 adminChatid, PageRequest.of(pageNumber, PAGE_SIZE));
         if (likes.isEmpty()) {
             sender.send(adminChatid, pageNumber == 0
-                    ? "💌 Todavía no recibiste likes."
-                    : "Esta página ya no está disponible. Volvé a /likes_recibidos_admin.");
+                    ? "💌 Todavía no diste likes."
+                    : "Esta página ya no está disponible. Volvé a /likes_enviados_admin.");
             return;
         }
 
-        StringBuilder text = new StringBuilder("💌 Likes que recibiste\n");
+        StringBuilder text = new StringBuilder("💌 Personas a las que diste like\n");
         text.append("📄 Página ").append(pageNumber + 1).append(" de ").append(likes.getTotalPages()).append("\n\n");
         for (Like like : likes) {
-            Profile profile = profileRepository.findByChatid(like.getFromChatid());
+            Profile profile = profileRepository.findByChatid(like.getToChatid());
             if (profile == null) {
                 text.append("👤 Perfil ya no disponible\n\n");
                 continue;
@@ -84,7 +86,7 @@ public class AdminReceivedLikesService {
             if (profile.getCity() != null && !profile.getCity().isBlank()) {
                 text.append("📍 ").append(profile.getCity()).append("\n");
             }
-            text.append(like.isMatched() ? "💕 Match mutuo\n" : "💌 Like recibido\n");
+            text.append(like.isMatched() ? "💕 Match mutuo\n" : "💌 Like enviado\n");
             String username = profile.getContactUsername();
             text.append("✈️ Telegram: ").append(username == null || username.isBlank()
                     ? "No disponible" : "@" + username).append("\n");

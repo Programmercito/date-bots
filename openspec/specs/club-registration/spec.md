@@ -8,7 +8,7 @@ Guide a user through creating a friendship-club profile, including collecting a 
 
 ### Requirement: Start Registration
 
-The system MUST start a new INCOMPLETE profile when a user invokes `/club` or taps "Entrar al club de amistad" and no profile exists.
+The system MUST start a new INCOMPLETE profile when a user invokes `/club` or taps "Entrar al club" and no profile exists.
 
 #### Scenario: New user starts registration
 

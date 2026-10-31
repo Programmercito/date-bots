@@ -190,20 +190,20 @@ class RepositoryTests {
     }
 
     @Test
-    void shouldPageOnlyLikesReceivedByTheRequestedUser() {
+    void shouldPageOnlyLikesSentByTheRequestedUser() {
         String admin = randomChatid();
         String other = randomChatid();
-        Like first = createLike(randomChatid(), admin, "2026-01-01T10:00:00Z", false);
-        Like second = createLike(randomChatid(), admin, "2026-01-02T10:00:00Z", true);
-        Like third = createLike(randomChatid(), admin, "2026-01-02T10:00:00Z", false);
-        createLike(admin, other, "2026-01-03T10:00:00Z", false);
+        Like first = createLike(admin, randomChatid(), "2026-01-01T10:00:00Z", false);
+        Like second = createLike(admin, randomChatid(), "2026-01-02T10:00:00Z", true);
+        Like third = createLike(admin, randomChatid(), "2026-01-02T10:00:00Z", false);
+        createLike(other, admin, "2026-01-03T10:00:00Z", false);
         createLike(randomChatid(), other, "2026-01-04T10:00:00Z", false);
 
-        var page = likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(0, 2));
+        var page = likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(0, 2));
 
         assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(page.getContent()).extracting(Like::getId).containsExactly(third.getId(), second.getId());
-        assertThat(likeRepository.findByToChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(1, 2))
+        assertThat(likeRepository.findByFromChatidOrderByCreatedAtDescIdDesc(admin, PageRequest.of(1, 2))
                 .getContent()).extracting(Like::getId).containsExactly(first.getId());
     }
 
