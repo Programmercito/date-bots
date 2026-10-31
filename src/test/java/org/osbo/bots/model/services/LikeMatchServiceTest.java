@@ -212,7 +212,7 @@ class LikeMatchServiceTest {
         assertThat(chatidCaptor.getAllValues()).containsExactly("A", "B");
         assertThat(photoCaptor.getAllValues()).containsExactly("photo-B", "photo-A");
         String textForA = textCaptor.getAllValues().get(0);
-        assertThat(textForA).contains("*Bruno*, 25 años");
+        assertThat(textForA).contains("¡Es un match!", "*Bruno*, 25 años", "conversar con respeto");
         assertThat(textForA).doesNotContain("2001-03-15");
         List<List<Button>> buttonsForA = buttonsCaptor.getAllValues().get(0);
         assertThat(flattenButtons(buttonsForA)).anyMatch(b -> b.getText().contains("Telegram @bruno")
@@ -255,7 +255,7 @@ class LikeMatchServiceTest {
     void shouldListMatchesWithoutDuplicates() {
         Profile me = approvedProfile("me");
         Profile matchOne = approvedProfile("match-1");
-        matchOne.setName("Carla");
+        matchOne.setName("Carla_*");
         matchOne.setContactUsername("carla");
         matchOne.setWhatsapp("+591 70011111");
         when(profileRepository.findByChatid("me")).thenReturn(me);
@@ -269,8 +269,8 @@ class LikeMatchServiceTest {
 
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
-                eq((String) null), eq(false), any(List.class), eq((String) null));
-        assertThat(textCaptor.getValue()).containsOnlyOnce("Carla");
+                eq((String) null), eq(false), any(List.class), eq((String) null), eq("Markdown"));
+        assertThat(textCaptor.getValue()).containsOnlyOnce("Carla\\_\\*");
     }
 
     @Test
@@ -301,7 +301,7 @@ class LikeMatchServiceTest {
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<List<Button>>> buttonsCaptor = ArgumentCaptor.forClass(List.class);
         verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
-                eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null));
+                eq((String) null), eq(false), buttonsCaptor.capture(), eq((String) null), eq("Markdown"));
         assertThat(textCaptor.getValue()).contains("Carla", "Diana", "Elena");
         assertThat(textCaptor.getValue()).doesNotContain("Fernanda");
         assertThat(textCaptor.getValue()).contains("página 1 de 2");
@@ -346,7 +346,7 @@ class LikeMatchServiceTest {
         verify(sender).deleteMessage("me", 100);
         ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
         verify(sender).send(eq("me"), textCaptor.capture(), eq("text"), eq((String) null),
-                eq((String) null), eq(false), any(List.class), eq((String) null));
+                eq((String) null), eq(false), any(List.class), eq((String) null), eq("Markdown"));
         assertThat(textCaptor.getValue()).contains("Fernanda");
         assertThat(textCaptor.getValue()).contains("página 2 de 2");
     }

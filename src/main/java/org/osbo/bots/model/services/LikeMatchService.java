@@ -21,6 +21,7 @@ import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.LookingForOption;
 import org.osbo.bots.util.MarkdownEscaper;
+import org.osbo.bots.util.TelegramPresentation;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -40,10 +41,10 @@ public class LikeMatchService {
     public static final String STATUS_PAUSED = "PAUSED";
     public static final String USER_STATUS_BLOCKED = "bloqueado";
 
-    public static final String MESSAGE_ANONYMOUS_LIKE = "A alguien le gustó tu perfil. Entrá al club con /ver_personas para seguir descubriendo.";
+    public static final String MESSAGE_ANONYMOUS_LIKE = "💌 ¡A alguien le gustó tu perfil! Seguí descubriendo personas con /ver_personas ✨";
     public static final String MESSAGE_UNAVAILABLE_PROFILE = "El perfil que te gustó no está disponible ahora. Continuá con /ver_personas.";
 
-    public static final String MESSAGE_NO_MATCHES = "Todavía no tenés matches. Seguí descubriendo personas con /ver_personas.";
+    public static final String MESSAGE_NO_MATCHES = "💫 Todavía no tenés matches. Seguí descubriendo personas con /ver_personas; una linda conexión puede estar cerca.";
     public static final String MESSAGE_MATCHES_REQUIRES_APPROVAL = "Necesitás tener un perfil aprobado para ver tus matches. Registrate con /club y esperá la aprobación.";
     public static final String MESSAGE_REPORT_CONFIRMATION = "Perfil reportado. Los administradores lo revisarán.";
 
@@ -167,7 +168,7 @@ public class LikeMatchService {
 
     private String buildMatchCaption(Profile profile) {
         StringBuilder caption = new StringBuilder();
-        caption.append("🎉 *¡Es un match!* ❤️\n\n");
+        caption.append("🎉 *¡Es un match!* 💞\n\n");
         caption.append("*").append(MarkdownEscaper.escape(profile.getName())).append("*, ")
                 .append(profile.getAge()).append(" años\n");
         caption.append(translateGender(profile.getGender())).append(" · ")
@@ -176,8 +177,9 @@ public class LikeMatchService {
         caption.append("*📝 Sobre:* ").append(MarkdownEscaper.escape(profile.getDescription())).append("\n");
         caption.append("*🎸 Gustos:* ").append(MarkdownEscaper.escape(profile.getTastes())).append("\n");
         caption.append("*🧠 Personalidad:* ").append(MarkdownEscaper.escape(profile.getTraits())).append("\n");
-        caption.append("*💘 Buscando:* ").append(LookingForOption.translate(profile.getLookingFor()));
-        return caption.toString();
+        caption.append("*💘 Buscando:* ").append(MarkdownEscaper.escape(LookingForOption.translate(profile.getLookingFor())));
+        return TelegramPresentation.decorate(caption.toString(), "",
+                "\n\n💌 ¡Anímense a conversar con respeto!", TelegramPresentation.CAPTION_LIMIT);
     }
 
     private List<List<Button>> buildMatchButtons(Profile matched) {
@@ -262,7 +264,7 @@ public class LikeMatchService {
         if (messageIdToDelete != null) {
             sender.deleteMessage(chatid, messageIdToDelete);
         }
-        sender.send(chatid, text, "text", null, null, false, buttons, null);
+        sender.send(chatid, text, "text", null, null, false, buttons, null, "Markdown");
     }
 
     private List<Profile> findUniqueMatches(String chatid) {
@@ -283,7 +285,7 @@ public class LikeMatchService {
 
     private String buildMatchListText(List<Profile> matches, int page, int totalPages) {
         StringBuilder text = new StringBuilder();
-        text.append("*Tus matches* (página ").append(page + 1).append(" de ").append(totalPages).append(")\n\n");
+        text.append("💞 *Tus matches* · página ").append(page + 1).append(" de ").append(totalPages).append("\n\n");
         if (matches.isEmpty()) {
             text.append("No hay matches en esta página.");
             return text.toString();

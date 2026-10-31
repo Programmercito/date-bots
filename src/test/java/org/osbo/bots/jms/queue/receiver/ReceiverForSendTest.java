@@ -12,14 +12,18 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.osbo.bots.jms.queue.pojos.Button;
 import org.osbo.bots.jms.queue.pojos.MessageSend;
+import org.osbo.bots.model.entity.Message;
 import org.osbo.bots.model.entity.Profile;
 import org.osbo.bots.model.entity.User;
 import org.osbo.bots.model.repositories.ProfileRepository;
 import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -45,6 +49,81 @@ class ReceiverForSendTest {
         receiver = new ReceiverForSend(messageService, userService, profileRepository);
         bot = mock(TelegramBot.class);
         receiver.setTelegramBotForTest(bot);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldDecorateChannelPostAndPreserveOriginalText(boolean photo) {
+        String original = "Hola *amigos* 😊\nBusco amistades";
+        ReflectionTestUtils.setField(receiver, "chatidchannel", "@canal");
+        SendResponse response = mock(SendResponse.class);
+        com.pengrad.telegrambot.model.Message sent = mock(com.pengrad.telegrambot.model.Message.class);
+        when(response.isOk()).thenReturn(true);
+        when(response.message()).thenReturn(sent);
+        when(sent.messageId()).thenReturn(123);
+        if (photo) {
+            when(bot.execute(any(SendPhoto.class))).thenReturn(response);
+        } else {
+            when(bot.execute(any(SendMessage.class))).thenReturn(response);
+        }
+        MessageSend message = new MessageSend();
+        message.setChatid(VIEWER_CHATID);
+        message.setTipo("channel");
+        message.setText(original);
+        message.setButtons(List.of(List.of(new Button("✉️ Escríbele", null, "https://t.me/usuario"))));
+        if (photo) {
+            message.setMedias(new String[] { "photo-id" });
+        }
+
+        receiver.sendMessage(message);
+
+        if (photo) {
+            ArgumentCaptor<SendPhoto> request = ArgumentCaptor.forClass(SendPhoto.class);
+            verify(bot).execute(request.capture());
+            assertThat((String) request.getValue().getParameters().get("caption"))
+                    .contains("💌 Una nueva conexión", original);
+            assertThat(request.getValue().getParameters()).doesNotContainKey("parse_mode");
+        } else {
+            ArgumentCaptor<SendMessage> request = ArgumentCaptor.forClass(SendMessage.class);
+            verify(bot).execute(request.capture());
+            assertThat((String) request.getValue().getParameters().get("text"))
+                    .contains("💌 Una nueva conexión", original);
+            assertThat(request.getValue().getParameters()).doesNotContainKey("parse_mode");
+        }
+        ArgumentCaptor<Message> saved = ArgumentCaptor.forClass(Message.class);
+        verify(messageService).save(saved.capture());
+        assertThat(saved.getValue().getTexto()).isEqualTo(original);
+    }
+
+    @Test
+    void shouldDecorateApprovedPostWithoutChangingStoredSubmission() {
+        ReflectionTestUtils.setField(receiver, "chatidchannel", "@canal");
+        Message stored = new Message();
+        stored.setTexto("Mensaje original *sin cambios*");
+        when(messageService.findById("approval-id")).thenReturn(stored);
+        SendResponse response = mock(SendResponse.class);
+        com.pengrad.telegrambot.model.Message sent = mock(com.pengrad.telegrambot.model.Message.class);
+        when(response.isOk()).thenReturn(true);
+        when(response.message()).thenReturn(sent);
+        when(sent.messageId()).thenReturn(321);
+        when(bot.execute(any(SendPhoto.class))).thenReturn(response);
+        MessageSend message = new MessageSend();
+        message.setChatid("author");
+        message.setTipo("channel");
+        message.setText(stored.getTexto());
+        message.setMsgid("approval-id");
+        message.setMedias(new String[] { "photo-id" });
+
+        receiver.sendMessage(message);
+
+        ArgumentCaptor<SendPhoto> request = ArgumentCaptor.forClass(SendPhoto.class);
+        verify(bot).execute(request.capture());
+        assertThat((String) request.getValue().getParameters().get("caption"))
+                .contains("💌 Una nueva conexión", "Mensaje original *sin cambios*");
+        assertThat(stored.getTexto()).isEqualTo("Mensaje original *sin cambios*");
+        assertThat(stored.getEstado()).isEqualTo("publicado");
+        assertThat(stored.getMessageid()).isEqualTo("321");
+        verify(messageService).save(stored);
     }
 
     @Test

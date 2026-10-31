@@ -148,6 +148,10 @@ Never block the Telegram update thread with slow work. Put heavy or risky operat
 5. Admin approves → message is posted to `telegram.channel`.
 6. After 1 hour, `DeleteVencidos` deletes the channel message.
 
+Channel posts receive a short decorative header and footer when they fit
+Telegram's text or photo-caption limit. The submitted text remains unchanged in
+storage and is sent as plain text; the contact button is preserved.
+
 ## 8. Friendship Club Flow
 
 ### 8.1 Registration

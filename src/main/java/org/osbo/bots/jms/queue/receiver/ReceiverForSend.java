@@ -13,6 +13,7 @@ import org.osbo.bots.model.services.MessageService;
 import org.osbo.bots.model.services.UserService;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.Sleep;
+import org.osbo.bots.util.TelegramPresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
@@ -126,8 +127,10 @@ public class ReceiverForSend {
         SendResponse response;
         boolean hasPhoto = message.getMedias() != null && message.getMedias().length > 0
                 && message.getMedias()[0] != null && !message.getMedias()[0].isBlank();
+        String text = "channel".equals(message.getTipo())
+                ? TelegramPresentation.channelPost(message.getText(), hasPhoto) : message.getText();
         if (!hasPhoto) {
-            SendMessage sendMessage = new SendMessage(destinatario, message.getText());
+            SendMessage sendMessage = new SendMessage(destinatario, text);
             sendMessage.disableNotification(message.isDisableNotification());
             applyParseMode(sendMessage, message.getParseMode());
             if (markup != null) {
@@ -136,7 +139,7 @@ public class ReceiverForSend {
             response = bot.execute(sendMessage);
         } else {
             SendPhoto sendphoto = new SendPhoto(destinatario, message.getMedias()[0]);
-            sendphoto.caption(message.getText());
+            sendphoto.caption(text);
             sendphoto.disableNotification(message.isDisableNotification());
             applyParseMode(sendphoto, message.getParseMode());
             if (markup != null) {
@@ -277,7 +280,9 @@ public class ReceiverForSend {
     }
 
     private void sendFallbackTextMessage(MessageSend message, TelegramBot bot, String chatid) {
-        SendMessage fallback = new SendMessage(chatid, message.getText());
+        String text = "channel".equals(message.getTipo())
+                ? TelegramPresentation.channelPost(message.getText(), false) : message.getText();
+        SendMessage fallback = new SendMessage(chatid, text);
         if (message.getButtons() != null && !message.getButtons().isEmpty()) {
             fallback.replyMarkup(buildMarkup(message.getButtons()));
         }

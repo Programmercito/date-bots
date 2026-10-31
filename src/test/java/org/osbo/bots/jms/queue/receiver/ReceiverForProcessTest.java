@@ -7,11 +7,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
+import org.osbo.bots.jms.queue.pojos.Button;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
 import org.osbo.bots.model.entity.User;
@@ -153,6 +157,40 @@ class ReceiverForProcessTest {
         receiver.sendMessage(update);
 
         verify(sender).send(eq(CHATID), anyString(), eq(true), any());
+        org.assertj.core.api.Assertions.assertThat(user.getComando()).isEqualTo("start");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldShowReadableMenuWithAllExistingActions() {
+        User user = newUser("start");
+        when(userService.findById(CHATID)).thenReturn(user);
+
+        receiver.sendMessage(newUpdate("/start"));
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<List<List<Button>>> buttons = ArgumentCaptor.forClass(List.class);
+        verify(sender).send(eq(CHATID), text.capture(), eq(true), buttons.capture());
+        org.assertj.core.api.Assertions.assertThat(text.getValue()).contains("Bolivia", "canal", "club");
+        org.assertj.core.api.Assertions.assertThat(buttons.getValue().stream().flatMap(List::stream)
+                .map(Button::getCallbackData))
+                .containsExactly("/publicar", "/ver_canal", "/club", "/ver_personas", "/mis_matches", "/editar_perfil");
+    }
+
+    @Test
+    void shouldKeepPhotoWhenPublishingWithoutModeration() {
+        User user = newUser("publicar");
+        MessageUpdate update = newUpdate("Hola, Bolivia");
+        update.setUser("usuario");
+        update.setMedias(new String[] { "photo-id" });
+        when(userService.findById(CHATID)).thenReturn(user);
+        ReflectionTestUtils.setField(receiver, "inicio", "00:00");
+        ReflectionTestUtils.setField(receiver, "fin", "00:00");
+        ReflectionTestUtils.setField(receiver, "aprob", "false");
+
+        receiver.sendMessage(update);
+
+        verify(sender).sendChannel(CHATID, "Hola, Bolivia", "usuario", "photo-id");
         org.assertj.core.api.Assertions.assertThat(user.getComando()).isEqualTo("start");
     }
 

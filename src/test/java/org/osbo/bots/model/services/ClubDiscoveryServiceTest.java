@@ -136,6 +136,35 @@ class ClubDiscoveryServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void shouldShowDecoratedProfileWithoutContactDetailsAndKeepActions() {
+        User user = newUser("start");
+        Profile viewer = approvedProfile(VIEWER_CHATID);
+        Profile target = approvedProfile(TARGET_CHATID);
+        target.setGender(ClubDiscoveryService.GENDER_FEMALE);
+        target.setName("Ana_*");
+        target.setDescription("Me gusta [bailar]");
+        target.setContactUsername("privado");
+        target.setWhatsapp("+59170012345");
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(viewer);
+        when(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc(ClubDiscoveryService.STATUS_APPROVED,
+                ClubDiscoveryService.COUNTRY_BOLIVIA)).thenReturn(List.of(target));
+        when(userRepository.findById(TARGET_CHATID)).thenReturn(Optional.of(activeUser(TARGET_CHATID)));
+
+        service.handle(user, newUpdate("/ver_personas", null));
+
+        ArgumentCaptor<String> caption = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<List<List<Button>>> buttons = ArgumentCaptor.forClass(List.class);
+        verify(sender).send(eq(VIEWER_CHATID), caption.capture(), eq("discovery_profile"), eq(target.getPhotoFileId()),
+                eq((String) null), eq(false), buttons.capture(), eq(TARGET_CHATID), eq("Markdown"));
+        assertThat(caption.getValue()).contains("✨ *Una nueva conexión* ✨", "Ana\\_\\*", "\\[bailar\\]")
+                .doesNotContain("privado", "+59170012345");
+        assertThat(buttons.getValue().stream().flatMap(List::stream).map(Button::getCallbackData))
+                .containsExactly("club_like_" + TARGET_CHATID, "club_skip_" + TARGET_CHATID,
+                        "club_report_" + TARGET_CHATID);
+    }
+
+    @Test
     void maleHeteroShouldSeeOnlyFemaleHetero() {
         User user = newUser("start");
         MessageUpdate update = newUpdate("/ver_personas", null);
@@ -442,7 +471,7 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         assertThat(user.getCurrentProfileMessageId()).isEqualTo(200);
-        verify(sender).editCaption(eq(VIEWER_CHATID), eq(200), eq("Le diste like a María ❤️"), any(List.class));
+        verify(sender).editCaption(eq(VIEWER_CHATID), eq(200), eq("❤️ ¡Le diste like a María!"), any(List.class));
         verify(jmsTemplate).convertAndSend(eq("queue.like"), any(LikeMessage.class));
         verify(jmsTemplate).convertAndSend(eq("queue.analytics"), any(AnalyticsMessage.class));
     }
@@ -464,7 +493,7 @@ class ClubDiscoveryServiceTest {
         service.handle(user, update);
 
         assertThat(user.getCurrentProfileMessageId()).isEqualTo(201);
-        verify(sender).editCaption(eq(VIEWER_CHATID), eq(201), eq("Skippeaste a Laura 👋"), any(List.class));
+        verify(sender).editCaption(eq(VIEWER_CHATID), eq(201), eq("👋 Por ahora pasaste el perfil de Laura."), any(List.class));
         ArgumentCaptor<SkippedProfile> skippedProfileCaptor = ArgumentCaptor.forClass(SkippedProfile.class);
         verify(skippedProfileRepository).save(skippedProfileCaptor.capture());
         assertThat(skippedProfileCaptor.getValue().getFromChatid()).isEqualTo(VIEWER_CHATID);
@@ -494,7 +523,7 @@ class ClubDiscoveryServiceTest {
 
         assertThat(user.getCurrentProfileMessageId()).isNull();
         verify(sender, never()).editCaption(anyString(), anyInt(), anyString(), org.mockito.ArgumentMatchers.anyList());
-        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("Skippeaste a Laura 👋\n\nNo hay más personas"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false));
+        verify(sender).send(eq(VIEWER_CHATID), org.mockito.ArgumentMatchers.startsWith("👋 Por ahora pasaste el perfil de Laura.\n\n✨ No hay más personas"), eq("discovery_empty"), eq((String)null), eq((String)null), eq(false));
     }
 
     @Test
@@ -515,7 +544,7 @@ class ClubDiscoveryServiceTest {
 
         assertThat(user.getCurrentProfileMessageId()).isEqualTo(202);
         verify(sender).editCaption(eq(VIEWER_CHATID), eq(202),
-                eq("Perfil reportado. Los administradores lo revisarán."), any(List.class));
+                eq("🛡️ Gracias por avisarnos. El equipo revisará este perfil."), any(List.class));
         verify(reportRepository).save(any(Report.class));
         ArgumentCaptor<ModerationMessage> moderationCaptor = ArgumentCaptor.forClass(ModerationMessage.class);
         verify(jmsTemplate).convertAndSend(eq("queue.moderation"), moderationCaptor.capture());

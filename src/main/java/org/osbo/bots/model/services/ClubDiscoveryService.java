@@ -26,6 +26,7 @@ import org.osbo.bots.model.repositories.UserRepository;
 import org.osbo.bots.util.FechaActual;
 import org.osbo.bots.util.LookingForOption;
 import org.osbo.bots.util.MarkdownEscaper;
+import org.osbo.bots.util.TelegramPresentation;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
@@ -200,7 +201,7 @@ public class ClubDiscoveryService {
         String name = profile == null ? "alguien" : profile.getName();
 
         trackCurrentMessageId(user, update);
-        String confirmation = "Le diste like a " + name + " ❤️";
+        String confirmation = "❤️ ¡Le diste like a " + name + "!";
         
         sendLikeMessage(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_LIKE, 1);
@@ -224,7 +225,7 @@ public class ClubDiscoveryService {
         String name = profile == null ? "alguien" : profile.getName();
 
         trackCurrentMessageId(user, update);
-        String confirmation = "Skippeaste a " + name + " 👋";
+        String confirmation = "👋 Por ahora pasaste el perfil de " + name + ".";
         
         saveSkip(update.getChatid(), targetChatid);
         sendAnalytics(update.getChatid(), EVENT_VIEW, 1);
@@ -248,7 +249,7 @@ public class ClubDiscoveryService {
         saveReport(update.getChatid(), targetChatid);
         notifyAdminAboutReport(profile);
 
-        String confirmation = "Perfil reportado. Los administradores lo revisarán.";
+        String confirmation = "🛡️ Gracias por avisarnos. El equipo revisará este perfil.";
         
         confirmAndCheckNext(user, update, confirmation);
         userRepository.save(user);
@@ -268,7 +269,7 @@ public class ClubDiscoveryService {
             sender.send(update.getChatid(), notice, SEND_TYPE_DISCOVERY_EMPTY, null, null, false);
             user.setComando(STATE_NO_PROFILES);
         } else {
-            List<List<Button>> buttons = List.of(List.of(new Button("Siguiente ➡️", CALLBACK_NEXT)));
+            List<List<Button>> buttons = List.of(List.of(new Button("✨ Ver siguiente", CALLBACK_NEXT)));
             sender.editCaption(update.getChatid(), user.getCurrentProfileMessageId(), confirmation, buttons);
         }
     }
@@ -338,22 +339,24 @@ public class ClubDiscoveryService {
     private String buildProfileCaption(Profile profile) {
         int photoCount = profile.photoCount();
         String photoLine = photoCount > 1 ? "📸 " + photoCount + " fotos\n" : "";
-        return "*" + MarkdownEscaper.escape(profile.getName()) + "*, " + profile.getAge() + " años\n"
+        String caption = "*" + MarkdownEscaper.escape(profile.getName()) + "*, " + profile.getAge() + " años\n"
                 + translateGender(profile.getGender()) + " · " + translateOrientation(profile.getOrientation()) + "\n"
                 + "📍 " + MarkdownEscaper.escape(profile.getCity()) + "\n"
                 + photoLine
                 + "\n*📝 Sobre:* " + MarkdownEscaper.escape(profile.getDescription()) + "\n"
                 + "*🎸 Gustos:* " + MarkdownEscaper.escape(profile.getTastes()) + "\n"
                 + "*🧠 Personalidad:* " + MarkdownEscaper.escape(profile.getTraits()) + "\n"
-                + "*💘 Buscando:* " + LookingForOption.translate(profile.getLookingFor());
+                + "*💘 Buscando:* " + MarkdownEscaper.escape(LookingForOption.translate(profile.getLookingFor()));
+        return TelegramPresentation.decorate(caption, "✨ *Una nueva conexión* ✨\n\n", "",
+                TelegramPresentation.CAPTION_LIMIT);
     }
 
     private List<List<Button>> buildProfileButtons(Profile profile) {
         return Arrays.asList(
                 Arrays.asList(
-                        new Button("❤️ Like", CALLBACK_LIKE_PREFIX + profile.getChatid()),
-                        new Button("👋 Skip", CALLBACK_SKIP_PREFIX + profile.getChatid()),
-                        new Button("🚫 Reportar", CALLBACK_REPORT_PREFIX + profile.getChatid())));
+                        new Button("❤️ Me gusta", CALLBACK_LIKE_PREFIX + profile.getChatid()),
+                        new Button("👋 Pasar", CALLBACK_SKIP_PREFIX + profile.getChatid())),
+                Arrays.asList(new Button("🛡️ Reportar perfil", CALLBACK_REPORT_PREFIX + profile.getChatid())));
     }
 
     private void deletePreviousProfileMessage(User user) {
@@ -469,7 +472,8 @@ public class ClubDiscoveryService {
     }
 
     private String noProfilesNotice() {
-        return "No hay más personas por ahora.\n\nActualizado: " + LocalTime.now().format(NOTICE_TIME_FORMAT);
+        return "✨ No hay más personas por ahora. Volvé más tarde para descubrir nuevas conexiones.\n\n"
+                + "🕒 Actualizado: " + LocalTime.now().format(NOTICE_TIME_FORMAT);
     }
 
 }

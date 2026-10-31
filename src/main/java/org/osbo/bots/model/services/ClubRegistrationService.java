@@ -235,11 +235,11 @@ public class ClubRegistrationService {
 
         user.setComando(STATE_REGISTER_NAME);
         sender.sendMarkdown(update.getChatid(),
-                "🤝 *Bienvenid@ al Club de Amistad de Bolivia*\n\n"
-                + "Vamos a armar tu perfil en 10 pasos rápidos.\n"
-                + "Cuando termines, lo revisamos y te avisamos.\n\n"
+                "🌷 *¡Bienvenid@ al Club de Amistad de Bolivia!* 🇧🇴\n\n"
+                + "Armemos un perfil que muestre quién sos y qué te gusta. ✨\n"
+                + "Cuando termines, lo revisaremos y te avisaremos.\n\n"
                 + "*[1/10] ¿Cómo querés que te llamemos?*\n"
-                + "Escribiá tu nombre o apodo:");
+                + "Escribí tu nombre o apodo:");
     }
 
     public void sendApprovedStatus(String chatid, Profile profile) {
@@ -374,7 +374,7 @@ public class ClubRegistrationService {
         List<List<Button>> buttons = Arrays.asList(
                 Arrays.asList(new Button("Hetero", CALLBACK_ORIENTATION_HETERO),
                         new Button("Bi", CALLBACK_ORIENTATION_BI)));
-        sender.sendMarkdown(update.getChatid(), "*[4/10] 💞 ¿Cuál es tu orientación?", true, buttons);
+        sender.sendMarkdown(update.getChatid(), "*[4/10] 💞 ¿Cuál es tu orientación?*", true, buttons);
     }
 
     private void askForGender(String chatid) {
@@ -784,7 +784,8 @@ public class ClubRegistrationService {
 
     private String buildProfilePreview(Profile profile) {
         StringBuilder preview = new StringBuilder();
-        preview.append("👁 *Así se verá tu perfil:*\n\n");
+        preview.append("🌟 *¡Tu perfil está casi listo!*\n");
+        preview.append("Revisá tus datos antes de enviarlo. 💌\n\n");
         preview.append("*👤 Nombre:* ").append(MarkdownEscaper.escape(profile.getName())).append("\n");
         preview.append("*🎂 Edad:* ").append(profile.getAge()).append(" años\n");
         preview.append("*⚧ Género:* ").append(translateGender(profile.getGender())).append("\n");

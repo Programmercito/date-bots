@@ -229,6 +229,7 @@ class ClubRegistrationServiceTest {
 
         service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_GENDER_MALE, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_ORIENTATION);
+        verify(sender).sendMarkdown(eq(CHATID), eq("*[4/10] 💞 ¿Cuál es tu orientación?*"), eq(true), any());
 
         service.handle(user, newUpdate(ClubRegistrationService.CALLBACK_ORIENTATION_HETERO, USERNAME));
         assertThat(user.getComando()).isEqualTo(ClubRegistrationService.STATE_REGISTER_CITY);

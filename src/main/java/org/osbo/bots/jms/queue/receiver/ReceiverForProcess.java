@@ -24,6 +24,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ReceiverForProcess {
+    private static final String CHANNEL_PUBLISHED_MESSAGE =
+            "🎉 ¡Tu mensaje fue enviado al canal!\n\n"
+            + "💌 Ojalá sea el comienzo de una linda conexión.\n"
+            + "📢 Encontralo en https://t.me/amistadbo";
+
     NqueueForSend sender;
     UserService userService;
     MessageService messageService;
@@ -147,16 +152,21 @@ public class ReceiverForProcess {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("❌ Cancelar", "/cancelar")));
                 sender.send(user.getChatid(),
-                        "¡Genial! 🎉🥳✨ Escribe el mensaje que te gustaría compartir en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. Tu mensaje estará visible durante una hora ⏰ y tu usuario de Telegram será compartido automáticamente para que otros puedan contactarte 🤝💌. Si quieres, puedes cambiar tu usuario de Telegram desde la app antes de publicar. No es necesario incluir otro medio de comunicación, pero si lo deseas, puedes agregar tu número de celular 📱☎️ u otro medio en el mensaje. ¡Esta es tu oportunidad para encontrar nuevas amistades! 🌟💫 Si cambias de opinión, presiona el botón Cancelar.",
+                        "💌 ¡Compartí algo sobre vos!\n\n"
+                        + "Escribí tu mensaje o enviá una foto con texto para el canal de amistad de Bolivia 🇧🇴.\n\n"
+                        + "⏰ La publicación estará visible durante una hora.\n"
+                        + "✉️ Tu usuario de Telegram se compartirá para que puedan escribirte.\n"
+                        + "📱 Agregar otro medio de contacto es opcional.\n\n"
+                        + "¿Cambiaste de idea? Tocá Cancelar. ✨",
                         buttons);
                 user.setComando("publicar");
             } else if ("/publicar".equals(update.getText()) && update.getUser() != null
                     && messageService.existsMessageInLastHour(update.getChatid()) > 0) {
                 sender.send(user.getChatid(),
-                        "¡Ups! 😅🚫 Ya has publicado un mensaje en la última hora. Por favor, espera un poco más antes de volver a publicar. ¡No te desanimes! Tu oportunidad de hacer nuevos amigos llegará pronto. 💖🤞🌟✨ ");
+                        "⏳ Ya publicaste durante la última hora. Esperá un poquito antes de compartir otro mensaje. 💌");
             } else if ("/publicar".equals(update.getText()) && update.getUser() == null) {
                 sender.send(user.getChatid(),
-                        "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 Si cambias de opinión, puedes escribir /cancelar. ¡Te esperamos! 🤗");
+                        "🔑 Para publicar, primero configurá un nombre de usuario en Telegram. Después volvé a intentarlo con /publicar. 💌");
             } else if ("/ver_canal".equals(update.getText())) {
                 sender.send(user.getChatid(), "Nuestro canal es: https://t.me/amistadbo");
             } else if (update.getText().startsWith("/aprobar_") && adminid.equals(update.getChatid())) {
@@ -171,7 +181,7 @@ public class ReceiverForProcess {
                         Arrays.asList(new Button("✏️ Publicar de nuevo", "/publicar"),
                                 new Button("📢 Ver canal", "/ver_canal")));
                 sender.send(msg.getUserid(),
-                        "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo",
+                        CHANNEL_PUBLISHED_MESSAGE,
                         true, buttons);
 
             } else if (update.getText().startsWith("/rechazar_") && adminid.equals(update.getChatid())) {
@@ -182,12 +192,12 @@ public class ReceiverForProcess {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("✏️ Publicar de nuevo", "/publicar")));
                 sender.send(msg.getUserid(),
-                        "Tu mensaje ha sido rechazado por los administradores, ten cuidado con lo que solicitas o podrias ser bloqueado, puedes volver a intentarlo mas tarde.",
+                        "💌 Tu publicación no pudo ser aprobada. Revisá su contenido y, si querés, intentá nuevamente más tarde.",
                         buttons);
                 sender.send(update.getChatid(), "Mensaje rechazado con exito.");
             } else {
                 sender.send(user.getChatid(),
-                        "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. Recuerda que este chat es solo para bolivianos 🇧🇴. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
+                        "🤔 No reconocí esa opción. Tocá /start para volver al menú y descubrir todo lo que podés hacer. ✨");
             }
 
         } else if ("publicar".equals(user.getComando())) {
@@ -195,26 +205,27 @@ public class ReceiverForProcess {
                 List<List<Button>> buttons = Arrays.asList(
                         Arrays.asList(new Button("✏️ Publicar", "/publicar")));
                 sender.send(user.getChatid(),
-                        "¡No hay problema! 😊👍 Tu publicación ha sido cancelada. Si quieres intentarlo de nuevo, solo escribe /publicar.",
+                        "🌷 Cancelamos tu publicación. Cuando quieras, podés intentarlo de nuevo con /publicar.",
                         buttons);
                 user.setComando("start");
             } else {
                 if (update.getUser() == null) {
                     sender.send(user.getChatid(),
-                            "¡Ups! 😅🚫 No puedes publicar un mensaje sin un usuario de Telegram. Por favor, ve a la app de Telegram y configúralo antes de publicar. ¡No te desanimes! Pronto podrás compartir tu mensaje y hacer nuevos amigos. 💪😊🌟 ¡Te esperamos! 🤗");
+                            "🔑 Para publicar necesitás configurar un nombre de usuario en Telegram. Después volvé a intentarlo. 💌");
                 } else if (!validarTiempos()) {
                     sender.send(user.getChatid(),
-                            "¡Ups! 😅⏳ En este momento no es posible publicar mensajes. Por favor, intenta más tarde. ¡No te desanimes, tu oportunidad de hacer nuevos amigos llegará pronto! 💖🤞🌟✨");
+                            "🌙 El canal está cerrado en este momento. Intentá nuevamente durante el horario de publicación. 💌");
                 } else {
                     boolean apro = aprob.equals("true") ? true : false;
                     if (!apro) {
-                        //String media = update.getMedias() == null ? null : update.getMedias()[0];
-                        sender.sendChannel(update.getChatid(), update.getText(), update.getUser(), null);
+                        String media = update.getMedias() == null || update.getMedias().length == 0
+                                ? null : update.getMedias()[0];
+                        sender.sendChannel(update.getChatid(), update.getText(), update.getUser(), media);
                         List<List<Button>> buttons = Arrays.asList(
                                 Arrays.asList(new Button("✏️ Publicar de nuevo", "/publicar"),
                                         new Button("📢 Ver canal", "/ver_canal")));
                         sender.send(user.getChatid(),
-                                "¡Listo! 🎊🙌🥳 Tu mensaje ha sido publicado en el canal de amistad. ¡Esperamos que encuentres personas increíbles y vivas nuevas experiencias! Si quieres volver a publicar, solo escribe /publicar. ¡Suerte y que la amistad te acompañe! 🥰🌟💬💖\n\nPuedes ver tu mensaje y los de otros en nuestro canal: https://t.me/amistadbo",
+                                CHANNEL_PUBLISHED_MESSAGE,
                                 true, buttons);
                     } else {
                         String media = update.getMedias() == null ? null : update.getMedias()[0];
@@ -223,7 +234,7 @@ public class ReceiverForProcess {
                         List<List<Button>> pendingButtons = Arrays.asList(
                                 Arrays.asList(new Button("✏️ Publicar de nuevo", "/publicar")));
                         sender.send(user.getChatid(),
-                                "Tu mensaje ha sido enviado a los administradores para su revisión. Te avisaremos cuando sea aprobado. ¡Gracias por tu paciencia! 🙏😊✨ Si quieres volver a publicar, solo escribe /publicar. ¡Estamos aquí para ayudarte a conectar con nuevas personas y vivar momentos geniales! 🌈🤩🎉💬",
+                                "💌 ¡Recibimos tu publicación!\n\nEl equipo la revisará y te avisaremos cuando sea aprobada. Gracias por tu paciencia. ✨",
                                 true, pendingButtons);
 
                     }
@@ -234,7 +245,7 @@ public class ReceiverForProcess {
             }
         } else {
             sender.send(user.getChatid(),
-                    "Comando no reconocido 😅❓. Puedes escribir /start para comenzar o /publicar para compartir un mensaje en el canal de amistad. ¡Anímate a participar y haz nuevos amigos! ✨🙌🎊💖");
+                    "🤔 No reconocí esa opción. Tocá /start para volver al menú. ✨");
         }
         userService.save(user);
     }
@@ -262,13 +273,16 @@ public class ReceiverForProcess {
     private void showStartMenu(User user, MessageUpdate update) {
         List<List<Button>> buttons = Arrays.asList(
                 Arrays.asList(new Button("✏️ Publicar", "/publicar"),
-                        new Button("📢 Ver canal", "/ver_canal"),
-                        new Button("🤝 Entrar al club de amistad", "/club")),
+                        new Button("📢 Ver canal", "/ver_canal")),
+                Arrays.asList(new Button("🤝 Entrar al club de amistad", "/club")),
                 Arrays.asList(new Button("👥 Ver personas", "/ver_personas"),
-                        new Button("✏️ Editar perfil", "/editar_perfil"),
-                        new Button("💕 Mis matches", "/mis_matches")));
+                        new Button("💕 Mis matches", "/mis_matches")),
+                Arrays.asList(new Button("✏️ Editar perfil", "/editar_perfil")));
         sender.send(update.getChatid(),
-                "¡Hola! 😃✨ ¡Bienvenido/a al bot de amistad! 💖 Este chat es exclusivo para personas de Bolivia 🇧🇴. Aquí puedes conocer personas increíbles y hacer nuevos amigos. Si quieres compartir un mensaje en nuestro canal de amistad, solo escribe /publicar, o unite al club de amistad con /club. ¡Atrévete a dar el primer paso y vive nuevas experiencias! 💬🤗🎉🥰, nuestro canal es : https://t.me/amistadbo",
+                "🌷 ¡Bienvenid@ a nuestra comunidad de amistad en Bolivia! 🇧🇴\n\n"
+                + "💌 Compartí un mensaje en el canal para que otras personas puedan conocerte.\n"
+                + "🤝 O entrá al club, armá tu perfil y descubrí nuevas conexiones.\n\n"
+                + "✨ Elegí una opción para comenzar:",
                 true, buttons);
         user.setComando("start");
     }
