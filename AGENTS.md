@@ -72,8 +72,8 @@ src/main/java/org/osbo/bots/
 | `/club` | "🤝 Entrar al club de amistad" | All | Enter the friendship club |
 | `/ver_personas` | "Ver personas" | Approved profiles | Start discovery |
 | `/editar_perfil` | "Editar perfil" | Approved profiles | Edit approved profile fields |
-| `/pausar_perfil` | "Pausar perfil" | Approved profiles | Hide from discovery (placeholder) |
-| `/activar_perfil` | "Activar perfil" | Paused profiles | Show in discovery (placeholder) |
+| `/pausar_perfil` | "Pausar perfil" | Approved profiles | Hide from discovery |
+| `/activar_perfil` | "Activar perfil" | Paused profiles | Show in discovery |
 | `/mis_matches` | "Mis matches" | Approved profiles | List mutual matches (paginated, 3 per page) with clear option |
 
 ### Admin commands
@@ -295,7 +295,6 @@ Already implemented:
 Still to implement:
 - Phase 5: Likes processing and mutual match detection (`queue.like`, `queue.match`).
 - Phase 6: Daily limits enforcement, reports handling, `/mis_matches`.
-- Phase 7: Pause/activate profile flows (edit is implemented; pause remains).
 - Future: payment integration.
 
 ## 15. Common Pitfalls

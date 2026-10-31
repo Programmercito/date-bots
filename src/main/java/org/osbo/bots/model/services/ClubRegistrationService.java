@@ -130,6 +130,42 @@ public class ClubRegistrationService {
         return false;
     }
 
+    public boolean handleProfileAvailability(@NonNull User user, @NonNull MessageUpdate update) {
+        String text = update.getText();
+        boolean pause = "/pausar_perfil".equals(text);
+        if (!pause && !"/activar_perfil".equals(text)) {
+            return false;
+        }
+
+        Profile profile = profileRepository.findByChatid(user.getChatid());
+        String expectedStatus = pause ? STATUS_APPROVED : STATUS_PAUSED;
+        String targetStatus = pause ? STATUS_PAUSED : STATUS_APPROVED;
+        if (profile == null || !expectedStatus.equals(profile.getStatus())) {
+            if (profile != null && targetStatus.equals(profile.getStatus())) {
+                sender.send(user.getChatid(), pause ? "Tu perfil ya está pausado." : "Tu perfil ya está activo.");
+            } else {
+                sender.send(user.getChatid(),
+                        "Necesitás tener un perfil aprobado para cambiar su disponibilidad. Entrá al club con /club.");
+            }
+            return true;
+        }
+
+        profile.setStatus(targetStatus);
+        profile.setUpdatedAt(isoTimestamp());
+        profileRepository.save(profile);
+        if (user.getComando() != null && user.getComando().startsWith("club_edit_")) {
+            user.clearTempPhotos();
+            user.setPhotoEditPromptMessageId(null);
+        }
+        user.setComando("start");
+        if (pause) {
+            sendPausedStatus(user.getChatid(), profile);
+        } else {
+            sendApprovedStatus(user.getChatid(), profile);
+        }
+        return true;
+    }
+
     private void handleClubCommand(User user, MessageUpdate update) {
         if (update.getUser() == null || update.getUser().isBlank()) {
             sender.send(update.getChatid(),
@@ -212,9 +248,11 @@ public class ClubRegistrationService {
                         new Button("✏️ Editar perfil", "/editar_perfil")),
                 Arrays.asList(new Button("⏸️ Pausar perfil", "/pausar_perfil"),
                         new Button("🏠 Volver al inicio", "/start")));
-        sender.sendMarkdown(chatid,
-                "🎉 *Tu perfil de @" + MarkdownEscaper.escape(profile.getContactUsername()) + " está aprobado.*\n\n¿Qué querés hacer?",
-                true, buttons);
+        String username = profile.getContactUsername();
+        String profileLabel = username == null || username.isBlank()
+                ? "Tu perfil"
+                : "Tu perfil de @" + MarkdownEscaper.escape(username);
+        sender.sendMarkdown(chatid, "🎉 *" + profileLabel + " está aprobado.*\n\n¿Qué querés hacer?", true, buttons);
     }
 
     private void sendRejectedStatus(String chatid, Profile profile) {

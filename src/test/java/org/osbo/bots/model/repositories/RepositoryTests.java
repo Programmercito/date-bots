@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-@DataJpaTest
+@DataJpaTest(properties = "spring.datasource.url=jdbc:sqlite:file:repository-test?mode=memory&cache=shared")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class RepositoryTests {
 
@@ -57,6 +57,29 @@ class RepositoryTests {
         assertThat(found.getId()).isEqualTo(saved.getId());
         assertThat(found.getName()).isEqualTo("Test");
         assertThat(found.getWhatsapp()).isEqualTo("+591 70012345");
+    }
+
+    @Test
+    void shouldExcludePausedProfileFromDiscoveryAndIncludeItAfterReactivation() {
+        String chatid = randomChatid();
+        Profile profile = new Profile();
+        profile.setChatid(chatid);
+        profile.setCountry("BO");
+        profile.setStatus("APPROVED");
+        profileRepository.saveAndFlush(profile);
+
+        assertThat(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc("APPROVED", "BO"))
+                .extracting(Profile::getChatid).contains(chatid);
+
+        profile.setStatus("PAUSED");
+        profileRepository.saveAndFlush(profile);
+        assertThat(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc("APPROVED", "BO"))
+                .extracting(Profile::getChatid).doesNotContain(chatid);
+
+        profile.setStatus("APPROVED");
+        profileRepository.saveAndFlush(profile);
+        assertThat(profileRepository.findByStatusAndCountryOrderByCreatedAtAsc("APPROVED", "BO"))
+                .extracting(Profile::getChatid).contains(chatid);
     }
 
     @Test

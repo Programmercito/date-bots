@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.osbo.bots.jms.queue.pojos.MessageUpdate;
@@ -90,6 +92,27 @@ class ReceiverForProcessTest {
         receiver.sendMessage(update);
 
         verify(clubProfileEditService).handle(user, update);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/pausar_perfil, club_edit_name",
+            "/pausar_perfil, club_browsing",
+            "/activar_perfil, club_register_name",
+            "/activar_perfil, start"
+    })
+    void shouldRouteAvailabilityFromAnyStateBeforeEditOrRegistration(String command, String state) {
+        User user = newUser(state);
+        MessageUpdate update = newUpdate(command);
+        when(userService.findById(CHATID)).thenReturn(user);
+        when(clubRegistrationService.handleProfileAvailability(user, update)).thenReturn(true);
+
+        receiver.sendMessage(update);
+
+        verify(clubRegistrationService).handleProfileAvailability(user, update);
+        verify(clubProfileEditService, org.mockito.Mockito.never()).handle(user, update);
+        verify(clubRegistrationService, org.mockito.Mockito.never()).handle(user, update);
+        verify(userService).save(user);
     }
 
     @Test

@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
@@ -91,6 +92,21 @@ class ClubDiscoveryServiceTest {
         assertThat(handled).isTrue();
         verify(sender).send(eq(VIEWER_CHATID), anyString());
         verify(profileRepository, never()).findByStatusAndCountryOrderByCreatedAtAsc(anyString(), anyString());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/ver_personas", "club_next"})
+    void shouldRejectDiscoveryWhileViewerIsPaused(String command) {
+        User user = newUser("start");
+        Profile profile = approvedProfile(VIEWER_CHATID);
+        profile.setStatus("PAUSED");
+        when(profileRepository.findByChatid(VIEWER_CHATID)).thenReturn(profile);
+
+        assertThat(service.handle(user, newUpdate(command, null))).isTrue();
+
+        verify(sender).send(eq(VIEWER_CHATID), anyString());
+        verify(profileRepository, never()).findByStatusAndCountryOrderByCreatedAtAsc(anyString(), anyString());
+        verify(jmsTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
 
     @Test

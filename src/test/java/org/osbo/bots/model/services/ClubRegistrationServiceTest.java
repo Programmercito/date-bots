@@ -2,6 +2,7 @@ package org.osbo.bots.model.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -9,9 +10,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.osbo.bots.jms.queue.enqueue.NqueueForSend;
 import org.osbo.bots.jms.queue.pojos.Button;
@@ -44,6 +49,131 @@ class ClubRegistrationServiceTest {
         userPlanRepository = mock(UserPlanRepository.class);
         jmsTemplate = mock(JmsTemplate.class);
         service = new ClubRegistrationService(sender, profileRepository, userPlanRepository, jmsTemplate);
+    }
+
+    @Test
+    void shouldPauseAndReactivateAnApprovedProfile() {
+        User user = newUser(ClubDiscoveryService.STATE_BROWSING);
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_APPROVED);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        assertThat(service.handleProfileAvailability(user, newUpdate("/pausar_perfil", USERNAME))).isTrue();
+        assertThat(profile.getStatus()).isEqualTo(ClubRegistrationService.STATUS_PAUSED);
+        assertThat(profile.getUpdatedAt()).isNotBlank();
+        assertThat(user.getComando()).isEqualTo("start");
+        verify(profileRepository).save(profile);
+        verify(sender).sendMarkdown(eq(CHATID), argThat(text -> text.contains("perfil está pausado")),
+                eq(true), argThat(rows -> rows.stream().flatMap(List::stream)
+                        .anyMatch(button -> "/activar_perfil".equals(button.getCallbackData()))));
+
+        assertThat(service.handleProfileAvailability(user, newUpdate("/activar_perfil", USERNAME))).isTrue();
+        assertThat(profile.getStatus()).isEqualTo(ClubRegistrationService.STATUS_APPROVED);
+        verify(profileRepository, org.mockito.Mockito.times(2)).save(profile);
+        verify(sender).sendMarkdown(eq(CHATID), argThat(text -> text.contains("está aprobado")),
+                eq(true), argThat(rows -> rows.stream().flatMap(List::stream)
+                        .anyMatch(button -> "/pausar_perfil".equals(button.getCallbackData()))));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unavailableProfileStates")
+    void shouldNotChangeIneligibleOrAlreadySetProfiles(String command, String status, String message) {
+        User user = newUser("club_edit_name");
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(status);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        assertThat(service.handleProfileAvailability(user, newUpdate(command, USERNAME))).isTrue();
+        assertThat(profile.getStatus()).isEqualTo(status);
+        assertThat(user.getComando()).isEqualTo("club_edit_name");
+        verify(profileRepository, never()).save(any());
+        verify(sender).send(CHATID, message);
+    }
+
+    private static Stream<Arguments> unavailableProfileStates() {
+        String ineligible = "Necesitás tener un perfil aprobado para cambiar su disponibilidad. Entrá al club con /club.";
+        return Stream.of(
+                Arguments.of("/pausar_perfil", "PAUSED", "Tu perfil ya está pausado."),
+                Arguments.of("/activar_perfil", "APPROVED", "Tu perfil ya está activo."),
+                Arguments.of("/pausar_perfil", "PENDING", ineligible),
+                Arguments.of("/activar_perfil", "PENDING", ineligible),
+                Arguments.of("/pausar_perfil", "INCOMPLETE", ineligible),
+                Arguments.of("/activar_perfil", "INCOMPLETE", ineligible),
+                Arguments.of("/pausar_perfil", "REJECTED", ineligible),
+                Arguments.of("/activar_perfil", "REJECTED", ineligible),
+                Arguments.of("/pausar_perfil", null, ineligible),
+                Arguments.of("/activar_perfil", null, ineligible));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"/pausar_perfil", "/activar_perfil"})
+    void shouldExplainAvailabilityRequiresAProfile(String command) {
+        User user = newUser("start");
+        when(profileRepository.findByChatid(CHATID)).thenReturn(null);
+
+        assertThat(service.handleProfileAvailability(user, newUpdate(command, USERNAME))).isTrue();
+        assertThat(user.getComando()).isEqualTo("start");
+        verify(sender).send(eq(CHATID), argThat(text -> text.contains("perfil aprobado")));
+        verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldIgnoreOtherCommandsAndNonTextUpdates() {
+        User user = newUser("start");
+
+        assertThat(service.handleProfileAvailability(user, newUpdate("/club", USERNAME))).isFalse();
+        assertThat(service.handleProfileAvailability(user, newUpdate(null, USERNAME))).isFalse();
+        verify(profileRepository, never()).findByChatid(any());
+        verify(profileRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldDiscardStagedPhotosWhenPausingDuringPhotoEdit() {
+        User user = newUser(ClubProfileEditService.STATE_EDIT_PHOTO);
+        user.setTempPhotoFileIds("staged-one|staged-two");
+        user.setPhotoEditPromptMessageId(123);
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_APPROVED);
+        profile.setPhotoFileId("original");
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handleProfileAvailability(user, newUpdate("/pausar_perfil", USERNAME));
+
+        assertThat(user.getTempPhotoFileIds()).isNull();
+        assertThat(user.getPhotoEditPromptMessageId()).isNull();
+        assertThat(profile.getPhotoFileId()).isEqualTo("original");
+        assertThat(user.getComando()).isEqualTo("start");
+    }
+
+    @Test
+    void shouldPauseWhenUserHasNoCurrentState() {
+        User user = newUser(null);
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_APPROVED);
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        assertThat(service.handleProfileAvailability(user, newUpdate("/pausar_perfil", USERNAME))).isTrue();
+
+        assertThat(profile.getStatus()).isEqualTo(ClubRegistrationService.STATUS_PAUSED);
+        assertThat(user.getComando()).isEqualTo("start");
+        verify(profileRepository).save(profile);
+    }
+
+    @Test
+    void shouldReactivateWithoutAnEmptyTelegramHandle() {
+        User user = newUser("start");
+        Profile profile = newIncompleteProfile();
+        profile.setStatus(ClubRegistrationService.STATUS_PAUSED);
+        profile.setContactUsername(null);
+        profile.setWhatsapp("+59170012345");
+        when(profileRepository.findByChatid(CHATID)).thenReturn(profile);
+
+        service.handleProfileAvailability(user, newUpdate("/activar_perfil", USERNAME));
+
+        assertThat(profile.getStatus()).isEqualTo(ClubRegistrationService.STATUS_APPROVED);
+        verify(sender).sendMarkdown(eq(CHATID),
+                argThat(text -> text.contains("Tu perfil está aprobado") && !text.contains("@")),
+                eq(true), any());
     }
 
     @Test
